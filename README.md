@@ -4,9 +4,9 @@
 
 <hr>
 
-![Issues](https://img.shields.io/github/issues/MusheAbdulHakim/laravel-smarthr)
-![Forks](https://img.shields.io/github/forks/MusheAbdulHakim/laravel-smarthr)
-![Stars](https://img.shields.io/github/stars/MusheAbdulHakim/laravel-smarthr)
+![Issues](https://img.shields.io/github/issues/Anes-BHD/smartRH)
+![Forks](https://img.shields.io/github/forks/Anes-BHD/smartRH)
+![Stars](https://img.shields.io/github/stars/Anes-BHD/smartRH)
 
 
 <p>
@@ -110,12 +110,10 @@
 
 Follow these steps below to install the application.
 
-Or Watch the installation process on [Youtube](https://youtu.be/UHkrsyBcMRM)
-
 - Clone the repository using your termina or command prompt
 ```php
 
-git clone https://github.com/MusheAbdulHakim/laravel-smarthr.git smarthr
+git clone https://github.com/Anes-BHD/smartRH.git smarthr
 ```
 ```
 cd smarthr
@@ -217,8 +215,6 @@ php artisan serve
 
 In order for the chap app to be working with realtime communication, you'll need to setup [Reverb](https://laravel.com/docs/11.x/reverb), Run the reverb server **php artisan reverb:start** and listen for events with **php artisan queue:listen**
 
-
-##### Please note that, this project is under active development so few things might break when you update. You can report any of your issues [here](https://github.com/MusheAbdulHakim/Laravel-Smarthr/issues)
 
 Consider supporting the project if you finds it helpful. Thank you
 - [Paystack](https://paystack.com/pay/musheabdulhakim)
