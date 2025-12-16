@@ -34,6 +34,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "friendsofphp/php-cs-fixer": "^3.66",
         "laravel-lang/common": "^6.3",
         "laravel-lang/http-statuses": "^3.8",
         "laravel-lang/lang": "^15.5",
