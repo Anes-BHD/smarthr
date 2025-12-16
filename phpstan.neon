@@ -1,0 +1,11 @@
+parameters:
+  level: 5
+  paths:
+    - app/
+    - config/
+    - database/
+    - resources/
+    - routes/
+    - tests/
+excludePaths:
+  - vendor/
