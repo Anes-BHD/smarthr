@@ -7,5 +7,5 @@ parameters:
     - resources/
     - routes/
     - tests/
-excludePaths:
-  - vendor/
+  excludePaths:
+    - vendor/
