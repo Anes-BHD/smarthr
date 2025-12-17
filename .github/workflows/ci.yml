@@ -35,6 +35,12 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --no-progress --prefer-dist --optimize-autoloader
 
+    - name: Install Node dependencies
+      run: npm install
+
+    - name: Build assets
+      run: npm run build
+
     - name: Setup Laravel environment
       run: |
         echo "APP_NAME=Smarthr" > .env
