@@ -56,10 +56,10 @@ jobs:
       run: ./vendor/bin/phpunit
 
     - name: Build Backend Docker Image
-      run: docker build -t backend ./Dockerfiles/app/backend
+      run: docker build -t backend -f Dockerfiles/app/backend/Dockerfile .
 
     - name: Build Frontend Docker Image
-      run: docker build -t frontend ./Dockerfiles/app/frontend
+      run: docker build -t frontend -f Dockerfiles/app/frontend/Dockerfile .
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
