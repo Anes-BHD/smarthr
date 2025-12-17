@@ -30,7 +30,7 @@ class UsersController extends BaseController
     public function create()
     {
         $roles = Role::get();
-        return view('pages.users.create',compact(
+        return view('pages.users.create', compact(
             'roles'
         ));
     }

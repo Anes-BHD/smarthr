@@ -24,8 +24,8 @@ class AssetsController extends Controller
      */
     public function create()
     {
-        $users = User::where('type','!=',UserType::SUPERADMIN)->where('is_active',1)->get();
-        return view('pages.assets.create',compact(
+        $users = User::where('type', '!=', UserType::SUPERADMIN)->where('is_active', 1)->get();
+        return view('pages.assets.create', compact(
             'users'
         ));
     }
@@ -52,8 +52,8 @@ class AssetsController extends Controller
         ]);
         $dir = public_path("storage/assets");
         $fileNames = [];
-        if(!empty($fileNames) && count($fileNames) > 0){
-            foreach($request->astFiles as $key => $requestFile){
+        if (!empty($fileNames) && count($fileNames) > 0) {
+            foreach ($request->astFiles as $key => $requestFile) {
                 if (!empty($requestFile)) {
                     $fileName = random_str(7) . '.' . $requestFile->extension();
                     array_push($fileNames, $fileName);
@@ -92,7 +92,7 @@ class AssetsController extends Controller
      */
     public function show(Asset $asset)
     {
-        return view('pages.assets.show',compact(
+        return view('pages.assets.show', compact(
             'asset'
         ));
     }
@@ -102,9 +102,10 @@ class AssetsController extends Controller
      */
     public function edit(Asset $asset)
     {
-        $users = User::where('type','!=',UserType::SUPERADMIN)->where('is_active',1)->get();
-        return view("pages.assets.edit",compact(
-            'asset','users'
+        $users = User::where('type', '!=', UserType::SUPERADMIN)->where('is_active', 1)->get();
+        return view("pages.assets.edit", compact(
+            'asset',
+            'users'
         ));
     }
 
@@ -130,8 +131,8 @@ class AssetsController extends Controller
         ]);
         $dir = public_path("storage/assets");
         $fileNames = $asset->files ?? [];
-        if(!empty($fileNames) && count($fileNames) > 0){
-            foreach($request->astFiles as $key => $requestFile){
+        if (!empty($fileNames) && count($fileNames) > 0) {
+            foreach ($request->astFiles as $key => $requestFile) {
                 if (!empty($requestFile)) {
                     $fileName = random_str(7) . '.' . $requestFile->extension();
                     array_push($fileNames, $fileName);

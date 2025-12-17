@@ -10,13 +10,15 @@ use App\Models\ChatMessage;
 
 class ChatAppController extends BaseController
 {
-
-    public function index(){
+    public function index()
+    {
         $pageTitle = __("Chat");
         $user = auth()->user();
         $default = true;
-        return view('apps.chat',compact(
-            'user','pageTitle','default'
+        return view('apps.chat', compact(
+            'user',
+            'pageTitle',
+            'default'
         ));
     }
 

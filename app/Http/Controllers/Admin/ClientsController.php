@@ -17,7 +17,7 @@ class ClientsController extends Controller
      * Display a listing of the resource.
      */
     public function index()
-    {        
+    {
         $pageTitle = __("Clients");
         $clients = User::where('type', UserType::CLIENT)->get();
         return view('pages.clients.index', compact(
@@ -78,7 +78,7 @@ class ClientsController extends Controller
             'is_active' => !empty($request->status),
             'password' => Hash::make($request->password)
         ]);
-        if(!empty($user)){
+        if (!empty($user)) {
             $user->assignRole(UserType::CLIENT);
             $totalEmployees = User::where('type', UserType::CLIENT)->where('is_active', true)->count();
             $cltId = "CLT-" . pad_zeros(($totalEmployees + 1));
@@ -96,15 +96,15 @@ class ClientsController extends Controller
      */
     public function show(string $client)
     {
-        try{
+        try {
             $user = User::findOrFail(Crypt::decrypt($client));
             $pageTitle = __("Client Profile");
-            return view('pages.clients.show',compact(
-                'user','pageTitle'
+            return view('pages.clients.show', compact(
+                'user',
+                'pageTitle'
             ));
-        }
-        catch(\Exception $e){
-            $notification = notify(__($e->getMessage()),'error');
+        } catch (\Exception $e) {
+            $notification = notify(__($e->getMessage()), 'error');
             return back()->with($notification);
         }
     }
@@ -116,11 +116,11 @@ class ClientsController extends Controller
     {
         try {
             $client = User::findOrFail(Crypt::decrypt($id));
-            return view('pages.clients.edit',compact(
+            return view('pages.clients.edit', compact(
                 'client'
             ));
-        }catch(\Exception $e){
-            $notification = notify(__($e->getMessage()),'error');
+        } catch (\Exception $e) {
+            $notification = notify(__($e->getMessage()), 'error');
             return back()->with($notification);
         }
     }
@@ -158,7 +158,7 @@ class ClientsController extends Controller
             'is_active' => !empty($request->status) ?? $user->is_active,
             'password' => !empty($request->password) ? Hash::make($request->password) : $user->password
         ]);
-        if(!$user->hasRole(UserType::CLIENT)){
+        if (!$user->hasRole(UserType::CLIENT)) {
             $user->assignRole(UserType::CLIENT);
         }
         $notification = notify(__('Client has been updated'));

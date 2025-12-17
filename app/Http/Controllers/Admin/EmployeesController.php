@@ -168,7 +168,7 @@ class EmployeesController extends Controller
             'password' => !empty($request->password) ? Hash::make($request->password) : $user->password
         ]);
         if (!empty($user)) {
-            if(!$user->hasRole(UserType::EMPLOYEE)){
+            if (!$user->hasRole(UserType::EMPLOYEE)) {
                 $user->assignRole(UserType::EMPLOYEE);
             }
             $employeeDetails = $user->employeeDetail;
