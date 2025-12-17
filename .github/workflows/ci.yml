@@ -46,9 +46,6 @@ jobs:
         echo "SESSION_DRIVER=array" >> .env
         echo "QUEUE_CONNECTION=sync" >> .env
 
-    - name: Run database migrations
-      run: php artisan migrate --force
-
     - name: Run PHPUnit
       run: ./vendor/bin/phpunit
 
