@@ -8,4 +8,11 @@ parameters:
     - routes/
     - tests/
   excludePaths:
-    - vendor/
+    analyse:
+      - vendor/
+
+services:
+    -
+        class: PHPStan\DependencyInjection\ValidateExcludePathsExtension
+        tags:
+            - phpstan.extension
