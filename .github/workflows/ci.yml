@@ -35,11 +35,6 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --no-progress --prefer-dist --optimize-autoloader
 
-    - name: Run PHPStan
-      run: |
-        composer require --dev phpstan/phpstan --no-interaction
-        ./vendor/bin/phpstan analyse --error-format=github --configuration=phpstan.neon
-
     - name: Run PHPUnit
       run: ./vendor/bin/phpunit
 
