@@ -10,10 +10,6 @@ parameters:
   excludePaths:
     analyse:
       - vendor/
-  checkMissingIterableValueType: false
-  checkGenericClassInNonGenericObjectType: false
-  checkUninitializedProperties: false
-  checkMissingCallableSignature: false
   ignoreErrors:
     # Laravel Facades
     - '#Call to an undefined static method Illuminate\\Support\\Facades\\Crypt::encrypt\(\)#'
