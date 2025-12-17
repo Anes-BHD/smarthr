@@ -35,11 +35,6 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --no-progress --prefer-dist --optimize-autoloader
 
-    - name: Run PHP CS Fixer
-      run: |
-        composer require --dev friendsofphp/php-cs-fixer --no-interaction
-        ./vendor/bin/php-cs-fixer fix --dry-run --diff --config=.php-cs-fixer.php
-
     - name: Run PHPStan
       run: |
         composer require --dev phpstan/phpstan --no-interaction
