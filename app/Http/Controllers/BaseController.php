@@ -7,7 +7,7 @@ class BaseController extends Controller {
 
     public function __construct()
     {
-       $this->data;
+       $this->data = [];
     }
 
 }

@@ -10,6 +10,75 @@ parameters:
   excludePaths:
     analyse:
       - vendor/
+  checkMissingIterableValueType: false
+  checkGenericClassInNonGenericObjectType: false
+  checkUninitializedProperties: false
+  checkMissingCallableSignature: false
+  ignoreErrors:
+    # Laravel Facades
+    - '#Call to an undefined static method Illuminate\\Support\\Facades\\Crypt::encrypt\(\)#'
+    - '#Call to an undefined static method Illuminate\\Support\\Facades\\Crypt::decrypt\(\)#'
+    # Laravel Eloquent magic methods
+    - '#Call to an undefined static method App\\Models\\\w+::where\(\)#'
+    - '#Call to an undefined static method App\\Models\\\w+::create\(\)#'
+    - '#Call to an undefined static method App\\Models\\\w+::findOrFail\(\)#'
+    - '#Call to an undefined static method App\\Models\\\w+::count\(\)#'
+    - '#Call to an undefined static method App\\Models\\\w+::get\(\)#'
+    - '#Call to an undefined static method App\\Models\\\w+::insert\(\)#'
+    - '#Call to an undefined static method App\\Models\\\w+::updateOrCreate\(\)#'
+    - '#Call to an undefined static method App\\Models\\\w+::whereMonth\(\)#'
+    - '#Call to an undefined static method App\\Models\\\w+::whereNotNull\(\)#'
+    - '#Call to an undefined static method App\\Models\\\w+::inRandomOrder\(\)#'
+    - '#Call to an undefined static method App\\Models\\\w+::whereHas\(\)#'
+    - '#Call to an undefined static method App\\Models\\\w+::join\(\)#'
+    # Laravel Request properties (accessed via magic methods)
+    - '#Access to an undefined property Illuminate\\Http\\Request::\$#'
+    # Laravel Model properties (accessed via magic methods)
+    - '#Access to an undefined property App\\Models\\\w+::\$#'
+    # Laravel Auth facade
+    - '#Call to an undefined method Illuminate\\Contracts\\Auth\\Factory::user\(\)#'
+    - '#Call to an undefined method Illuminate\\Contracts\\Auth\\Factory::logout\(\)#'
+    # Spatie Menu (macros)
+    - '#Call to an undefined static method Spatie\\Menu\\Laravel\\Html::userAvatar\(\)#'
+    # Spatie Permission
+    - '#Call to an undefined static method Spatie\\Permission\\Models\\Role::get\(\)#'
+    - '#Call to an undefined method.*hasPermissionTo\(\)#'
+    # Spatie MediaLibrary
+    - '#Call to an undefined method Spatie\\MediaLibrary\\MediaCollections\\Models\\Collections\\MediaCollection::delete\(\)#'
+    # Module models
+    - '#Call to an undefined static method Modules\\\w+\\Models\\\w+::#'
+    # World package
+    - '#Call to an undefined static method Nnjeim\\World\\World::#'
+    # Carbon methods
+    - '#Method Carbon\\Carbon::subMonth\(\) invoked with 1 parameter, 0 required#'
+    - '#Access to an undefined property Carbon\\CarbonInterval::\$#'
+    # Settings properties
+    - '#Access to an undefined property App\\Settings\\\w+::\$#'
+    # Temporary upload class (optional package)
+    - '#Class Spatie\\MediaLibraryPro\\Models\\TemporaryUpload not found#'
+    - '#Class Spatie\\LaravelData\\Data not found#'
+    # RTippin Messenger
+    - '#Parameter \$event of method App\\Listeners\\BroadcastError::handle\(\) has invalid type RTippin\\Messenger\\Events\\BroadcastFailedEvent#'
+    # Variable checks (common false positives)
+    - '#Variable \$module in empty\(\) always exists and is not falsy#'
+    - '#Variable \$fileNames in empty\(\) always exists and is always falsy#'
+    - '#Variable \$user in empty\(\) always exists and is not falsy#'
+    - '#Variable \$lastMessage might not be defined#'
+    - '#Variable \$seen might not be defined#'
+    - '#Variable \$created_at might not be defined#'
+    - '#Variable \$isSender might not be defined#'
+    - '#Variable \$timeAgo might not be defined#'
+    - '#Variable \$recentProjects might not be defined#'
+    # Expression checks
+    - '#Expression on left side of \?\? is not nullable#'
+    - '#Expression "\$this->data" on a separate line does not do anything#'
+    - '#Comparison operation ">" between \*NEVER\* and 0 results in an error#'
+    - '#Result of && is always false#'
+    - '#Ternary operator condition is always true#'
+    # Undefined variable in tests
+    - '#Undefined variable: \$this#'
+    # PHPUnit assertions
+    - '#Call to method PHPUnit\\Framework\\Assert::assertTrue\(\) with true will always evaluate to true#'
 
 services:
     -

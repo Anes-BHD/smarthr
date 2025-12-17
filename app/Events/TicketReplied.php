@@ -34,6 +34,6 @@ class TicketReplied implements ShouldBroadcast
      */
     public function broadcastOn()
     {
-        return new Channel('tickets');
+        return [new Channel('tickets')];
     }
 }

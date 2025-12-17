@@ -25,6 +25,7 @@ class DashboardController extends BaseController
             return view('pages.employees.dashboard',$this->data);
         }
         $projects = null;
+        $recentProjects = null;
         if(!empty(module('Project')) && module('Project')->isEnabled()){
             $projects = \Modules\Project\Models\Project::get();
             $recentProjects = \Modules\Project\Models\Project::whereMonth('created_at', Carbon::today())->get();

@@ -93,9 +93,9 @@ if (!function_exists('format_date')) {
     /**
      * Custom Date Formatter
      *
-     * @param string|date $date
+     * @param string|\DateTimeInterface|Carbon\Carbon $date
      * @param string $format
-     * @return void
+     * @return string
      */
     function format_date($date, $format = '')
     {
