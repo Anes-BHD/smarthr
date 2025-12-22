@@ -32,7 +32,7 @@
         "autolinker": "^2.2.2",
         "ckeditor5": "^42.0.1",
         "clsx": "^2.1.1",
-        "datatables.net-bs5": "^2.0.8",
+        "datatables.net-bs5": "^2.3.5",
         "datatables.net-buttons-bs5": "^3.0.2",
         "datatables.net-colreorder-bs5": "^2.0.3",
         "datatables.net-select-bs5": "^2.0.3",
