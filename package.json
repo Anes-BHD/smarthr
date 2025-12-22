@@ -33,7 +33,7 @@
         "ckeditor5": "^42.0.1",
         "clsx": "^2.1.1",
         "datatables.net-bs5": "^2.0.8",
-        "datatables.net-buttons-bs5": "^3.0.2",
+        "datatables.net-buttons-bs5": "^3.2.5",
         "datatables.net-colreorder-bs5": "^2.0.3",
         "datatables.net-select-bs5": "^2.0.3",
         "dayjs": "^1.10.6",
