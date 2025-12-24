@@ -118,3 +118,11 @@ jobs:
         file: ./Dockerfiles/db/Dockerfile
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/smarthr-db:${{ github.sha }}, ${{ secrets.DOCKER_USERNAME }}/smarthr-db:latest
+        
+    - name: Build and Push web Image
+      uses: docker/build-push-action@v5
+      with:
+          context: .
+          file: ./Dockerfiles/web/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/smarthr-web:${{ github.sha }}, ${{ secrets.DOCKER_USERNAME }}/smarthr-web:latest
