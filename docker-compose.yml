@@ -16,8 +16,13 @@ services:
       - smartrh_network
     environment:
       - PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
+      - DB_CONNECTION=mysql
+      - DB_HOST=smarthr.cad0sgy8mpf7.us-east-1.rds.amazonaws.com
+      - DB_PORT=3306
+      - DB_DATABASE=mysql
+      - DB_USERNAME=admin
+      - DB_PASSWORD=S8d4FH4LHyRAEVMrf6WK
     depends_on:
-      - db
       - redis
 
   # Frontend Service (Node.js/Vite)
@@ -57,27 +62,6 @@ services:
       - backend
       - frontend
 
-  # Database Service (MySQL)
-  db:
-    build:
-      context: .
-      dockerfile: Dockerfiles/db/Dockerfile
-    container_name: smartrh_db
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: smartrh
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_PASSWORD: password
-      MYSQL_USER: smartrh
-      SERVICE_TAGS: dev
-      SERVICE_NAME: mysql
-    volumes:
-      - db_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    networks:
-      - smartrh_network
-
   # Redis Service (for caching and sessions)
   redis:
     image: redis:alpine
@@ -91,7 +75,3 @@ services:
 networks:
   smartrh_network:
     driver: bridge
-
-volumes:
-  db_data:
-    driver: local
