@@ -1,7 +1,7 @@
 FROM nginx:alpine
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx configuration (use repo path so CI root context works)
+COPY Dockerfiles/web/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Set working directory
 WORKDIR /var/www/smartrh

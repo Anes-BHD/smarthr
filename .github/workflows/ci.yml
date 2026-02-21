@@ -88,25 +88,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Java (required by dependency-check)
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+    - name: Create report directory
+      run: mkdir -p dependency-check-report
 
-    - name: Install jq
-      run: sudo apt-get update && sudo apt-get install -y jq
-
-    - name: Install Composer dependencies
-      run: composer install --no-progress --prefer-dist
-
-    - name: Run OWASP Dependency-Check
-      uses: owasp/dependency-check-action@v6
-      with:
-        scan: 'composer.lock'
-        format: 'ALL'
-        outputDirectory: 'dependency-check-report'
-        project: 'smartRH'
+    - name: Run OWASP Dependency-Check (Docker)
+      run: |
+        docker run --rm \
+          -v "${{ github.workspace }}:/src" \
+          -v "${{ github.workspace }}/dependency-check-report:/report" \
+          owasp/dependency-check:latest \
+          --project "smartRH" \
+          --scan /src \
+          --format ALL \
+          --out /report
 
     - name: Upload Dependency-Check report
       uses: actions/upload-artifact@v4
