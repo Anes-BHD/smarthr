@@ -88,47 +88,32 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Create report directory
-      run: mkdir -p dependency-check-report
-
-    - name: Run OWASP Dependency-Check (Docker)
+    - name: Run OWASP Dependency-Check
+      uses: dependency-check/Dependency-Check_Action@main
       id: owasp
       continue-on-error: true
-      run: |
-        docker run --rm \
-          -v "${{ github.workspace }}:/src" \
-          -v "${{ github.workspace }}/dependency-check-report:/report" \
-          owasp/dependency-check:latest \
-          --project "smartRH" \
-          --scan /src \
-          --format ALL \
-          --out /report
+      with:
+        project: 'smartRH'
+        path: '.'
+        format: 'ALL'
+        out: 'dependency-check-report'
+        args: >
+          --enableRetired
+          --enableExperimental
 
-    - name: Upload Dependency-Check report
+    - name: Upload Dependency-Check report as artifact
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: dependency-check-report
         path: dependency-check-report
 
-    - name: Convert JSON report to SARIF
-      if: always()
-      run: |
-        if [ -f dependency-check-report/dependency-check-report.json ]; then
-          jq -n --argfile d dependency-check-report/dependency-check-report.json \
-            '{version: "2.1.0", runs: [$d]}' > dependency-check.sarif || true
-        fi
-        # Always ensure a valid SARIF file exists for upload
-        if [ ! -f dependency-check.sarif ]; then
-          echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}' > dependency-check.sarif
-        fi
-
-    - name: Upload SARIF
-      if: always()
+    - name: Upload SARIF to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v4
-      with:
-        sarif_file: 'dependency-check.sarif'
+      if: always()
       continue-on-error: true
+      with:
+        sarif_file: dependency-check-report/dependency-check-report.sarif
 
   deploy:
     runs-on: ubuntu-latest
