@@ -80,6 +80,52 @@ jobs:
       with:
         sarif_file: 'trivy-results.sarif'
 
+  dependency-check:
+    name: OWASP Dependency-Check
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Java (required by dependency-check)
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Install jq
+      run: sudo apt-get update && sudo apt-get install -y jq
+
+    - name: Install Composer dependencies
+      run: composer install --no-progress --prefer-dist
+
+    - name: Run OWASP Dependency-Check
+      uses: owasp/dependency-check-action@v6
+      with:
+        scan: 'composer.lock'
+        format: 'ALL'
+        outputDirectory: 'dependency-check-report'
+        project: 'smartRH'
+
+    - name: Upload Dependency-Check report
+      uses: actions/upload-artifact@v4
+      with:
+        name: dependency-check-report
+        path: dependency-check-report
+
+    - name: Convert JSON to SARIF (optional)
+      run: |
+        if [ -f dependency-check-report/dependency-check-report.json ]; then
+          jq -n --argfile d dependency-check-report/dependency-check-report.json '{version: "2.1.0", runs: [$d]}' > dependency-check.sarif || true
+        fi
+
+    - name: Upload SARIF
+      if: always()
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: 'dependency-check.sarif'
+
   deploy:
     runs-on: ubuntu-latest
     needs: test

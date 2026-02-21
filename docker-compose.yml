@@ -13,7 +13,9 @@ services:
       - ./:/var/www/smartrh
       - ./storage:/var/www/smartrh/storage
     networks:
-      - smartrh_network
+      smartrh_network:
+        aliases:
+          - backend
     environment:
       - PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
     depends_on:
@@ -50,7 +52,7 @@ services:
       - "8080:80"
     volumes:
       - ./:/var/www/smartrh
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./Dockerfiles/web/nginx.conf:/etc/nginx/conf.d/default.conf
     networks:
       - smartrh_network
     depends_on:
