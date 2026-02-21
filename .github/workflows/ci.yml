@@ -124,40 +124,46 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
       with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+        
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build and Push Backend Image
+
+    - name: Build and Push Backend Image to ECR
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./Dockerfiles/app/backend/Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/smarthr-backend:${{ github.sha }}, ${{ secrets.DOCKER_USERNAME }}/smarthr-backend:latest
+        tags: ${{ steps.login-ecr.outputs.registry }}/smarthr:backend-${{ github.sha }}, ${{ steps.login-ecr.outputs.registry }}/smarthr:backend-latest
 
-    - name: Build and Push Frontend Image
+    - name: Build and Push Frontend Image to ECR
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./Dockerfiles/app/frontend/Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/smarthr-frontend:${{ github.sha }}, ${{ secrets.DOCKER_USERNAME }}/smarthr-frontend:latest
+        tags: ${{ steps.login-ecr.outputs.registry }}/smarthr:frontend-${{ github.sha }}, ${{ steps.login-ecr.outputs.registry }}/smarthr:frontend-latest
 
-    - name: Build and Push Database Image
+    - name: Build and Push Database Image to ECR
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./Dockerfiles/db/Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/smarthr-db:${{ github.sha }}, ${{ secrets.DOCKER_USERNAME }}/smarthr-db:latest
+        tags: ${{ steps.login-ecr.outputs.registry }}/smarthr:db-${{ github.sha }}, ${{ steps.login-ecr.outputs.registry }}/smarthr:db-latest
 
-    - name: Build and Push web Image
+    - name: Build and Push Web Image to ECR
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./Dockerfiles/web/Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/smarthr-web:${{ github.sha }}, ${{ secrets.DOCKER_USERNAME }}/smarthr-web:latest
+        tags: ${{ steps.login-ecr.outputs.registry }}/smarthr:web-${{ github.sha }}, ${{ steps.login-ecr.outputs.registry }}/smarthr:web-latest 
