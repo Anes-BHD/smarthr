@@ -19,7 +19,6 @@ services:
     environment:
       - PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
     depends_on:
-      - db
       - redis
 
  
@@ -40,26 +39,27 @@ services:
     depends_on:
       - backend
 
-  # Database Service (MySQL)
-  db:
-    build:
-      context: .
-      dockerfile: Dockerfiles/db/Dockerfile
-    container_name: smartrh_db
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: smartrh
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_PASSWORD: password
-      MYSQL_USER: smartrh
-      SERVICE_TAGS: dev
-      SERVICE_NAME: mysql
-    volumes:
-      - db_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    networks:
-      - smartrh_network
+  # Database Service (MySQL) - REMOVED: Using AWS RDS instead
+  # Uncomment the db service below to use local MySQL for development
+  # db:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfiles/db/Dockerfile
+  #   container_name: smartrh_db
+  #   restart: unless-stopped
+  #   environment:
+  #     MYSQL_DATABASE: smartrh
+  #     MYSQL_ROOT_PASSWORD: root
+  #     MYSQL_PASSWORD: password
+  #     MYSQL_USER: smartrh
+  #     SERVICE_TAGS: dev
+  #     SERVICE_NAME: mysql
+  #   volumes:
+  #     - db_data:/var/lib/mysql
+  #   ports:
+  #     - "3306:3306"
+  #   networks:
+  #     - smartrh_network
 
   # Redis Service (for caching and sessions)
   redis:
@@ -75,6 +75,5 @@ networks:
   smartrh_network:
     driver: bridge
 
-volumes:
-  db_data:
-    driver: local
+# volumes:
+#   db_data: (removed - using AWS RDS)
