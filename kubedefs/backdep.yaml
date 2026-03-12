@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smarthrback
+  labels: 
+    app: smarthrback
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smarthrback
+  template:
+    metadata:
+      labels:
+        app: smarthrback
+    spec:
+      containers:
+      - name: smarthrback
+        image: anesbhd/smarthr-backend:latest
+        imagePullPolicy: Always
+        ports:
+        - name: smarthrback-port
+          containerPort: 9000
+      initContainers:
+      - name: init-mydb
+        image: busybox
+        args: ['-c', 'until nslookup smarthrdb.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for mydb; sleep 2; done;']
+      - name: init-memcache
+        image: busybox
+        args: ['-c', 'until nslookup smarthrcache01.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for mydb; sleep 2; done;']

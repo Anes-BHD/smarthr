@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smarthrdb
+  labels:
+    app: smarthrdb
+spec:
+  selector:
+    matchLabels:
+      app: smarthrdb
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: smarthrdb
+    spec:
+      containers:
+      - name: smarthrdb
+        image: anesbhd/smarthr-db:latest
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: smarthr-db-data
+        ports:
+        - name: smarthrdb-port 
+          containerPort: 3306
+        env:
+         - name: MYSQL_ROOT_PASSWORD
+           valueFrom:
+             secretKeyRef:
+               name: app-secret
+               key: db-pass
+      volumes:
+        - name: smarthr-db-data
+          persistentVolumeClaim:
+            claimName: db-pv-claim 
+
+      initContainers:
+        - name: busybox
+          image: busybox:latest
+          command: ["sh", "-c", "rm -rf /var/lib/mysql/lost+found"]
+          volumeMounts:
+            - name: smarthr-db-data
+              mountPath: /var/lib/mysql

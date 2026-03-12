@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: smarthrcache01
+spec:
+  ports:
+  - port: 6379
+    targetPort: smarthrcache-port
+    protocol: TCP
+  selector:
+    app: smarthrcache 
+  type: ClusterIP

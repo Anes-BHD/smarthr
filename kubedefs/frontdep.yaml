@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smarthrfront
+  labels: 
+    app: smarthrfront
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smarthrfront
+  template:
+    metadata:
+      labels:
+        app: smarthrfront
+    spec:
+      containers:
+      - name: smarthrfront
+        image: anesbhd/smarthr-frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - name: smarthrfront-port
+          containerPort: 5173
