@@ -1,5 +1,9 @@
 name: CI
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ main ]
@@ -41,10 +45,16 @@ jobs:
       run: composer install --no-progress --prefer-dist --optimize-autoloader
 
     - name: Install Node dependencies
-      run: npm install
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install frontend dependencies
+      run: npm ci
 
     - name: Build assets
-      run: npm run build
+      run: npm run build --if-present
 
     - name: Setup Laravel environment
       run: |
@@ -58,13 +68,19 @@ jobs:
         echo "QUEUE_CONNECTION=sync" >> .env
 
     - name: Run PHPUnit
-      run: ./vendor/bin/phpunit
+      run: |
+        mkdir -p test-results
+        ./vendor/bin/phpunit --log-junit test-results/phpunit.xml
 
-    - name: Build Backend Docker Image
-      run: docker build -t backend -f Dockerfiles/app/backend/Dockerfile .
+    - name: Upload PHPUnit results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: phpunit-results
+        path: test-results
 
-    - name: Build Frontend Docker Image
-      run: docker build -t frontend -f Dockerfiles/app/frontend/Dockerfile .
+    # Docker image builds removed from the test job to speed up CI.
+    # Image builds are handled in the deploy job where images are pushed to ECR.
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
@@ -93,7 +109,7 @@ jobs:
       id: owasp
       continue-on-error: true
       with:
-        project: 'smartRH'
+        project: 'smarthr'
         path: '.'
         format: 'ALL'
         out: 'dependency-check-report'
@@ -160,10 +176,21 @@ jobs:
         push: true
         tags: ${{ steps.login-ecr.outputs.registry }}/smarthr:db-${{ github.sha }}, ${{ steps.login-ecr.outputs.registry }}/smarthr:db-latest
 
+    - name: Setup Node.js for frontend build
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install frontend dependencies
+      run: npm ci
+
+    - name: Build frontend assets for web image
+      run: npm run build
+
     - name: Build and Push Web Image to ECR
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./Dockerfiles/web/Dockerfile
         push: true
-        tags: ${{ steps.login-ecr.outputs.registry }}/smarthr:web-${{ github.sha }}, ${{ steps.login-ecr.outputs.registry }}/smarthr:web-latest 
+        tags: ${{ steps.login-ecr.outputs.registry }}/smarthr:web-${{ github.sha }}, ${{ steps.login-ecr.outputs.registry }}/smarthr:web-latest

@@ -22,7 +22,25 @@ services:
       - db
       - redis
 
- 
+  # Frontend Service (Node.js/Vite)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfiles/app/frontend/Dockerfile
+    container_name: smartrh_frontend
+    restart: unless-stopped
+    working_dir: /var/www/smartrh
+    volumes:
+      - ./:/var/www/smartrh
+      - /var/www/smartrh/node_modules
+    ports:
+      - "5173:5173"
+    networks:
+      - smartrh_network
+    command: ["npm", "run", "build"]
+    depends_on:
+      - backend
+
   # Web Server (Nginx)
   web:
     build:
@@ -39,6 +57,7 @@ services:
       - smartrh_network
     depends_on:
       - backend
+      - frontend
 
   # Database Service (MySQL)
   db:
