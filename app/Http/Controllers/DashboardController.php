@@ -25,6 +25,7 @@ class DashboardController extends BaseController
             return view('pages.employees.dashboard',$this->data);
         }
         $projects = null;
+        $recentProjects = null;
         if(!empty(module('Project')) && module('Project')->isEnabled()){
             $projects = \Modules\Project\Models\Project::get();
             $recentProjects = \Modules\Project\Models\Project::whereMonth('created_at', Carbon::today())->get();
@@ -33,6 +34,21 @@ class DashboardController extends BaseController
         $thisMonthClients = User::where('type', UserType::CLIENT)->whereMonth('created_at', Carbon::today())->get();
         $employees = User::where('type', UserType::EMPLOYEE)->get();
         $tickets = Ticket::get();
+
+        // Initialize sales data
+        $this->data['thisMonthExpenses'] = 0;
+        $this->data['prevMonthExpenses'] = 0;
+        $this->data['thisMonthEstimates'] = 0;
+        $this->data['prevMonthEstimates'] = 0;
+        $this->data['thisMonthInvoices'] = 0;
+        $this->data['prevMonthInvoices'] = 0;
+        $this->data['invoices'] = collect();
+        $this->data['thisMonthInvoiceList'] = collect();
+        $this->data['thisMonthPaidInvoiceList'] = collect();
+        $this->data['monthly_expense'] = collect();
+        $this->data['budget_collection'] = collect();
+        $this->data['invoice_collection'] = collect();
+        $this->data['estimates_collection'] = collect();
 
         if(module('Sales') && module('Sales')->isEnabled()){
 

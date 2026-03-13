@@ -173,15 +173,17 @@
                     </div>
                     </x-form.input-block>
                     <div x-show="forProject">
-                        <x-form.input-block>
-                            <x-form.label required>{{ __('Project') }}</x-form.label>
-                            <select class="form-control" name="project" wire:model="project">
-                                <option value="">{{ __('Select Project') }}</option>
-                                @foreach (\Modules\Project\Models\Project::get() as $project)
-                                    <option value="{{ $project->id }}">{{ $project->name }}</option>
-                                @endforeach
-                            </select>
-                        </x-form.input-block>
+                        @if (\Illuminate\Support\Facades\Schema::hasTable('projects'))
+                            <x-form.input-block>
+                                <x-form.label required>{{ __('Project') }}</x-form.label>
+                                <select class="form-control" name="project" wire:model="project">
+                                    <option value="">{{ __('Select Project') }}</option>
+                                    @foreach (\Modules\Project\Models\Project::get() as $project)
+                                        <option value="{{ $project->id }}">{{ $project->name }}</option>
+                                    @endforeach
+                                </select>
+                            </x-form.input-block>
+                        @endif
                     </div>
                 </div>
                 <div class="submit-section mb-3">
