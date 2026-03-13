@@ -1,5 +1,5 @@
 #!/bin/bash
-chmod -R 775 /var/www/smartrh/storage /var/www/smartrh/bootstrap/cache
+chmod -R 777 /var/www/smartrh/storage /var/www/smartrh/bootstrap/cache
 chown -R www-data:www-data /var/www/smartrh/storage /var/www/smartrh/bootstrap/cache
 
 composer install --working-dir=/var/www/smartrh
