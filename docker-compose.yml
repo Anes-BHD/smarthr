@@ -48,10 +48,9 @@ services:
     container_name: smartrh_db
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: smartrh
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_PASSWORD: password
-      MYSQL_USER: smartrh
+      MYSQL_DATABASE: env.DB_DATABASE
+      MYSQL_PASSWORD: env.DB_PASSWORD
+      MYSQL_USER: env.DB_USERNAME
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
     volumes:
