@@ -21,6 +21,7 @@ services:
     depends_on:
       - db
       - redis
+    user: "root"
 
  
   # Web Server (Nginx)
@@ -48,9 +49,10 @@ services:
     container_name: smartrh_db
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: env.DB_DATABASE
-      MYSQL_PASSWORD: env.DB_PASSWORD
-      MYSQL_USER: env.DB_USERNAME
+      MYSQL_DATABASE: smarthr
+      MYSQL_USER: smarthr
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: rootpassword
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
     volumes:

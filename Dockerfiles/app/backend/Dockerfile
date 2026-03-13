@@ -36,8 +36,6 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 RUN pecl install redis && docker-php-ext-enable redis
 
 # Install wkhtmltopdf for PDF generation
-# Required by: barryvdh/laravel-snappy package
-# Used for: PDF exports in DataTables (Client, Employee, Payslip, etc.) and estimate PDFs
 RUN apt-get update && apt-get install -y \
     xvfb \
     xfonts-75dpi \
@@ -55,10 +53,13 @@ RUN echo "listen = 0.0.0.0:9000" >> /usr/local/etc/php-fpm.d/www.conf
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set proper permissions for Laravel
-RUN chown -R www-data:www-data /var/www/smartrh
+# Create storage directories
+RUN mkdir -p /var/www/smartrh/storage/framework/{sessions,views,cache} \
+    && mkdir -p /var/www/smartrh/bootstrap/cache
 
-# Expose port 9000 for PHP-FPM
+# Copy and set up entrypoint
+COPY Dockerfiles/app/backend/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 9000
-
-CMD ["php-fpm"]
+CMD ["/entrypoint.sh"]
