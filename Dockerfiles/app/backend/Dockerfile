@@ -55,8 +55,11 @@ RUN echo "listen = 0.0.0.0:9000" >> /usr/local/etc/php-fpm.d/www.conf
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set proper permissions for Laravel
-RUN chown -R www-data:www-data /var/www/smartrh
+# Set proper permissions for Laravel storage and bootstrap directories
+RUN mkdir -p /var/www/smartrh/storage/framework/{sessions,views,cache} \
+    && mkdir -p /var/www/smartrh/bootstrap/cache \
+    && chown -R www-data:www-data /var/www/smartrh/storage /var/www/smartrh/bootstrap \
+    && chmod -R 775 /var/www/smartrh/storage /var/www/smartrh/bootstrap
 
 # Expose port 9000 for PHP-FPM
 EXPOSE 9000

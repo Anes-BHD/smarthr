@@ -10,14 +10,28 @@ services:
     restart: unless-stopped
     working_dir: /var/www/smartrh
     volumes:
-      - ./:/var/www/smartrh
+      - ./app:/var/www/smartrh/app
+      - ./bootstrap:/var/www/smartrh/bootstrap
+      - ./config:/var/www/smartrh/config
+      - ./database:/var/www/smartrh/database
+      - ./lang:/var/www/smartrh/lang
+      - ./resources:/var/www/smartrh/resources
+      - ./routes:/var/www/smartrh/routes
+      - ./Modules:/var/www/smartrh/Modules
+      - ./public:/var/www/smartrh/public
       - ./storage:/var/www/smartrh/storage
+      - ./vendor:/var/www/smartrh/vendor
+      - ./.env:/var/www/smartrh/.env
+      - ./composer.json:/var/www/smartrh/composer.json
+      - ./composer.lock:/var/www/smartrh/composer.lock
+      - ./artisan:/var/www/smartrh/artisan
     networks:
       smartrh_network:
         aliases:
           - backend
     environment:
       - PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
+    user: "www-data:www-data"
     depends_on:
       - redis
 
