@@ -9,16 +9,16 @@ fi
 chmod -R 777 /var/www/smartrh/storage /var/www/smartrh/bootstrap/cache
 chown -R www-data:www-data /var/www/smartrh/storage /var/www/smartrh/bootstrap/cache
 
-# Wait for MySQL to be ready
+# Wait for MySQL to be ready using TCP check
 echo "Waiting for database..."
-until php /var/www/smartrh/artisan db:monitor --databases=mysql 2>/dev/null; do
-    sleep 2
+until (echo > /dev/tcp/db/3306) 2>/dev/null; do
+    echo "DB not ready, retrying in 3s..."
+    sleep 3
 done
+echo "Database is ready!"
 
-# Use migrate --skip-existing or just ignore errors from already-existing tables
 php /var/www/smartrh/artisan migrate --force --no-interaction 2>&1 || true
 
-# Only seed if no users exist
 USER_COUNT=$(php /var/www/smartrh/artisan tinker --execute="echo \App\Models\User::count();" 2>/dev/null | tail -1)
 if [ "$USER_COUNT" = "0" ]; then
     php /var/www/smartrh/artisan db:seed --force

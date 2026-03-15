@@ -1,6 +1,44 @@
 #version: '3.8'
 
 services:
+
+  # Database Service (MySQL)
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfiles/db/Dockerfile
+    container_name: db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    environment:
+      MYSQL_DATABASE: smarthr
+      MYSQL_USER: smarthr
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: rootpassword
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - smartrh_network
+  # Redis Service (for caching and sessions)
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - smartrh_network
+
+
   # Backend Service (Laravel PHP-FPM)
   backend:
     build:
@@ -25,8 +63,8 @@ services:
     environment:
       - PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
     user: "root"
 
  
@@ -48,36 +86,6 @@ services:
       backend:
         condition: service_healthy
 
-  # Database Service (MySQL)
-  db:
-    build:
-      context: .
-      dockerfile: Dockerfiles/db/Dockerfile
-    container_name: db
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: smarthr
-      MYSQL_USER: smarthr
-      MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: rootpassword
-      SERVICE_TAGS: dev
-      SERVICE_NAME: mysql
-    volumes:
-      - db_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    networks:
-      - smartrh_network
-
-  # Redis Service (for caching and sessions)
-  redis:
-    image: redis:alpine
-    container_name: redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    networks:
-      - smartrh_network
 
 networks:
   smartrh_network:
