@@ -6,7 +6,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfiles/app/backend/Dockerfile
-    container_name: smartrh_backend
+    container_name: backend
+    healthcheck:
+      test: ["CMD", "php-fpm", "-t"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     restart: unless-stopped
     working_dir: /var/www/smartrh
     volumes:
@@ -29,7 +35,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfiles/web/Dockerfile
-    container_name: smartrh_web
+    container_name: web
     restart: unless-stopped
     ports:
       - "8080:80"
@@ -39,14 +45,15 @@ services:
     networks:
       - smartrh_network
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
   # Database Service (MySQL)
   db:
     build:
       context: .
       dockerfile: Dockerfiles/db/Dockerfile
-    container_name: smartrh_db
+    container_name: db
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: smarthr
@@ -65,7 +72,7 @@ services:
   # Redis Service (for caching and sessions)
   redis:
     image: redis:alpine
-    container_name: smartrh_redis
+    container_name: redis
     restart: unless-stopped
     ports:
       - "6379:6379"
