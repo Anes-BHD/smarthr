@@ -205,7 +205,7 @@ jobs:
         push: true
         tags: |
             ${{ steps.meta.outputs.backend_image }}
-        ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REGISTRY_ALIAS }}:backend-latest
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REGISTRY_ALIAS }}:backend-latest
         cache-from: |
           type=gha
           ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REGISTRY_ALIAS }}:backend-latest
