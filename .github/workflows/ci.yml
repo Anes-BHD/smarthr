@@ -160,6 +160,18 @@ jobs:
  
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
+
+      # Install composer deps so vendor/ is present for the backend image
+    - name: Setup PHP 8.2
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: pdo_mysql, mbstring, bcmath, gd, zip
+        tools: composer:v2
+ 
+
+    - name: Install Composer dependencies (production)
+      run: composer install --no-dev --optimize-autoloader --no-progress
  
       # Build frontend assets before baking them into images
     - name: Setup Node 18
@@ -173,17 +185,7 @@ jobs:
         npm ci
         npm run build --if-present
  
-      # Install composer deps so vendor/ is present for the backend image
-    - name: Setup PHP 8.2
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.2'
-        extensions: pdo_mysql, mbstring, bcmath, gd, zip
-        tools: composer:v2
- 
-    - name: Install Composer dependencies (production)
-      run: composer install --no-dev --optimize-autoloader --no-progress
- 
+
     # Emit image URIs for the deploy job
     - name: Compute image tags
       id: meta
