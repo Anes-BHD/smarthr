@@ -141,7 +141,6 @@ jobs:
       frontend_image: ${{ steps.meta.outputs.frontend_image }}
       db_image: ${{ steps.meta.outputs.db_image }}
       web_image: ${{ steps.meta.outputs.web_image }}
-      redis_image: ${{ steps.meta.outputs.redis_image }}
  
     steps:
     - name: Checkout code
@@ -198,7 +197,6 @@ jobs:
         echo "frontend_image=${REGISTRY}/${REPO}:frontend-${SHA}" >> "$GITHUB_OUTPUT"
         echo "db_image=${REGISTRY}/${REPO}:db-${SHA}"             >> "$GITHUB_OUTPUT"
         echo "web_image=${REGISTRY}/${REPO}:web-${SHA}"           >> "$GITHUB_OUTPUT"
-        echo "redis_image=${REGISTRY}/${REPO}:redis-${SHA}"       >> "$GITHUB_OUTPUT"
  
     - name: Build & push backend image
       uses: docker/build-push-action@v5
@@ -247,18 +245,6 @@ jobs:
         tags: |
           ${{ steps.meta.outputs.web_image }}
           ${{ steps.login-ecr.outputs.registry }}/smarthr:web-latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-    - name: Build & push redis image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfiles/redis/Dockerfile
-        push: true
-        tags: |
-          ${{ steps.meta.outputs.redis_image }}
-          ${{ steps.login-ecr.outputs.registry }}/smarthr:redis-latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
