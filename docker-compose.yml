@@ -3,31 +3,31 @@
 services:
 
   # Database Service (MySQL)
-  db:
-    build:
-      context: .
-      dockerfile: Dockerfiles/db/Dockerfile
-    container_name: db
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    environment:
-      MYSQL_DATABASE: smarthr
-      MYSQL_USER: smarthr
-      MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: rootpassword
-      SERVICE_TAGS: dev
-      SERVICE_NAME: mysql
-    volumes:
-      - db_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    networks:
-      - smartrh_network
+#  db:
+#    build:
+#      context: .
+#      dockerfile: Dockerfiles/db/Dockerfile
+#    container_name: db
+#    restart: unless-stopped
+#    healthcheck:
+#      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 10
+#      start_period: 30s
+#    environment:
+#      MYSQL_DATABASE: smarthr
+#      MYSQL_USER: smarthr
+#      MYSQL_PASSWORD: password
+#      MYSQL_ROOT_PASSWORD: rootpassword
+#      SERVICE_TAGS: dev
+#      SERVICE_NAME: mysql
+#    volumes:
+#      - db_data:/var/lib/mysql
+#    ports:
+#      - "3306:3306"
+#    networks:
+#      - smartrh_network
   # Redis Service (for caching and sessions)
   redis:
     image: redis:alpine
@@ -63,11 +63,10 @@ services:
     environment:
       - PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
     depends_on:
-      db:
-        condition: service_healthy
+      - redis
     user: "root"
 
- 
+
   # Web Server (Nginx)
   web:
     build:
@@ -91,6 +90,3 @@ networks:
   smartrh_network:
     driver: bridge
 
-volumes:
-  db_data:
-    driver: local

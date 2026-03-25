@@ -139,7 +139,6 @@ jobs:
     outputs:
       backend_image: ${{ steps.meta.outputs.backend_image }}
       frontend_image: ${{ steps.meta.outputs.frontend_image }}
-      db_image: ${{ steps.meta.outputs.db_image }}
       web_image: ${{ steps.meta.outputs.web_image }}
  
     steps:
@@ -195,7 +194,6 @@ jobs:
         SHA="${{ github.sha }}"
         echo "backend_image=${REGISTRY}/${REPO}:backend-${SHA}"   >> "$GITHUB_OUTPUT"
         echo "frontend_image=${REGISTRY}/${REPO}:frontend-${SHA}" >> "$GITHUB_OUTPUT"
-        echo "db_image=${REGISTRY}/${REPO}:db-${SHA}"             >> "$GITHUB_OUTPUT"
         echo "web_image=${REGISTRY}/${REPO}:web-${SHA}"           >> "$GITHUB_OUTPUT"
  
     - name: Build & push backend image
@@ -224,15 +222,6 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
  
-    - name: Build & push database image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfiles/db/Dockerfile
-        push: true
-        tags: |
-          ${{ steps.meta.outputs.db_image }}
-          ${{ steps.login-ecr.outputs.registry }}/smarthr:db-latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
  

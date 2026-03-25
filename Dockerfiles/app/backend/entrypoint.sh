@@ -11,7 +11,7 @@ chown -R www-data:www-data /var/www/smartrh/storage /var/www/smartrh/bootstrap/c
 
 # Wait for MySQL to be ready using TCP check
 echo "Waiting for database..."
-until (echo > /dev/tcp/db/3306) 2>/dev/null; do
+until (echo > /dev/tcp/smarthr.cad0sgy8mpf7.us-east-1.rds.amazonaws.com/3306) 2>/dev/null; do
     echo "DB not ready, retrying in 3s..."
     sleep 3
 done
