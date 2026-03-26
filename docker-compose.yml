@@ -30,15 +30,21 @@ services:
 #      - smartrh_network
   # Redis Service (for caching and sessions)
   redis:
-    image: redis:alpine
+    build:
+      context: .
+      dockerfile: Dockerfiles/cache/Dockerfile
     container_name: redis
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     ports:
       - "6379:6379"
     networks:
       - smartrh_network
-
-
   # Backend Service (Laravel PHP-FPM)
   backend:
     build:
@@ -63,7 +69,8 @@ services:
     environment:
       - PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     user: "root"
 
 
