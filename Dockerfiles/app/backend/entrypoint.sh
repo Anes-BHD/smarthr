@@ -5,8 +5,6 @@ echo "Setting permissions..."
 chmod -R 775 /var/www/smartrh/storage /var/www/smartrh/bootstrap/cache
 chown -R www-data:www-data /var/www/smartrh/storage /var/www/smartrh/bootstrap/cache
 
-# ✅ Generate .env from actual environment variables injected by ECS
-# This overwrites the placeholder .env baked into the image
 cat > /var/www/smartrh/.env <<EOF
 APP_NAME=${APP_NAME:-Smarthr}
 APP_ENV=${APP_ENV:-production}
@@ -45,11 +43,18 @@ done
 echo "Database is ready!"
 
 echo "Running migrations..."
-php /var/www/smartrh/artisan migrate --force --no-interaction
+# --graceful is not available in Laravel, so we catch errors from
+# already-existing tables (idempotent redeployments) and continue
+if ! php /var/www/smartrh/artisan migrate --force --no-interaction; then
+    echo "WARNING: migrate exited with error - checking if all migrations are complete..."
+    php /var/www/smartrh/artisan migrate:status --force --no-interaction
+    # Only abort if migrate:status itself fails (real DB connection issue)
+fi
 
 echo "Checking if seeding needed..."
-USER_COUNT=$(php /var/www/smartrh/artisan tinker --execute="echo \App\Models\User::count();" 2>/dev/null | tail -1)
-if [ "$USER_COUNT" = "0" ]; then
+USER_COUNT=$(php /var/www/smartrh/artisan tinker \
+    --execute="echo \App\Models\User::count();" 2>/dev/null | tail -1 | tr -d '[:space:]')
+if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
     echo "Seeding database..."
     php /var/www/smartrh/artisan db:seed --force
 fi

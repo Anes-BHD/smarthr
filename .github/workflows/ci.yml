@@ -194,9 +194,9 @@ jobs:
         REPO="smarthr"   
         SHA="${{ github.sha }}"
         echo "backend_image=${REGISTRY}/${REPO}:backend-${SHA}"   >> "$GITHUB_OUTPUT"
-        echo "frontend_image=${REGISTRY}/${REPO}:frontend-${SHA}" >> "$GITHUB_OUTPUT"
         echo "web_image=${REGISTRY}/${REPO}:web-${SHA}"           >> "$GITHUB_OUTPUT"
         echo "redis_image=${REGISTRY}/${REPO}:redis-${SHA}" >> "$GITHUB_OUTPUT"
+      # echo "frontend_image=${REGISTRY}/${REPO}:frontend-${SHA}" >> "$GITHUB_OUTPUT"
     
     - name: Build & push Redis image
       uses: docker/build-push-action@v5
@@ -224,17 +224,17 @@ jobs:
           ${{ steps.login-ecr.outputs.registry }}/smarthr:backend-latest
         cache-to: type=gha,mode=max
  
-    - name: Build & push frontend image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfiles/app/frontend/Dockerfile
-        push: true
-        tags: |
-          ${{ steps.meta.outputs.frontend_image }}
-          ${{ steps.login-ecr.outputs.registry }}/smarthr:frontend-latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+#    - name: Build & push frontend image
+#      uses: docker/build-push-action@v5
+#      with:
+#        context: .
+#        file: ./Dockerfiles/app/frontend/Dockerfile
+#        push: true
+#        tags: |
+#          
+#          /smarthr:frontend-latest
+#        cache-from: type=gha
+#        cache-to: type=gha,mode=max
 
     - name: Build & push web (Nginx) image
       uses: docker/build-push-action@v5
