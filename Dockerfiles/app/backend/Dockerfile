@@ -29,8 +29,6 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # ✅ Copy application source (vendor/ already built by CI runner)
 COPY . .
 
-# ✅ Generate .env from example — real values come from ECS task definition env vars
-RUN cp .env.example .env
 
 RUN mkdir -p storage/framework/{sessions,views,cache} bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
