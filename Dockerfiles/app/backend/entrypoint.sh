@@ -1,27 +1,62 @@
 #!/bin/bash
 set -e
 
-# Only run composer install if vendor is missing
-if [ ! -f /var/www/smartrh/vendor/autoload.php ]; then
-    composer install --working-dir=/var/www/smartrh --no-interaction
-fi
-
-chmod -R 777 /var/www/smartrh/storage /var/www/smartrh/bootstrap/cache
+echo "Setting permissions..."
+chmod -R 775 /var/www/smartrh/storage /var/www/smartrh/bootstrap/cache
 chown -R www-data:www-data /var/www/smartrh/storage /var/www/smartrh/bootstrap/cache
 
-# Wait for MySQL to be ready using TCP check
+# ✅ Generate .env from actual environment variables injected by ECS
+# This overwrites the placeholder .env baked into the image
+cat > /var/www/smartrh/.env <<EOF
+APP_NAME=${APP_NAME:-Smarthr}
+APP_ENV=${APP_ENV:-production}
+APP_KEY=${APP_KEY}
+APP_DEBUG=${APP_DEBUG:-false}
+APP_URL=${APP_URL:-http://localhost}
+
+LOG_CHANNEL=stderr
+LOG_LEVEL=debug
+
+DB_CONNECTION=mysql
+DB_HOST=${DB_HOST}
+DB_PORT=${DB_PORT:-3306}
+DB_DATABASE=${DB_DATABASE}
+DB_USERNAME=${DB_USERNAME}
+DB_PASSWORD=${DB_PASSWORD}
+
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+
+CACHE_STORE=redis
+REDIS_CLIENT=${REDIS_CLIENT:-phpredis}
+REDIS_HOST=${REDIS_HOST:-127.0.0.1}
+REDIS_PORT=${REDIS_PORT:-6379}
+REDIS_PASSWORD=${REDIS_PASSWORD:-}
+
+QUEUE_CONNECTION=database
+FILESYSTEM_DISK=local
+EOF
+
 echo "Waiting for database..."
-until (echo > /dev/tcp/smarthr.cad0sgy8mpf7.us-east-1.rds.amazonaws.com/3306) 2>/dev/null; do
+until (echo > /dev/tcp/${DB_HOST}/3306) 2>/dev/null; do
     echo "DB not ready, retrying in 3s..."
     sleep 3
 done
 echo "Database is ready!"
 
-php /var/www/smartrh/artisan migrate --force --no-interaction 2>&1 || true
+echo "Running migrations..."
+php /var/www/smartrh/artisan migrate --force --no-interaction
 
+echo "Checking if seeding needed..."
 USER_COUNT=$(php /var/www/smartrh/artisan tinker --execute="echo \App\Models\User::count();" 2>/dev/null | tail -1)
 if [ "$USER_COUNT" = "0" ]; then
+    echo "Seeding database..."
     php /var/www/smartrh/artisan db:seed --force
 fi
 
+echo "Caching config..."
+php /var/www/smartrh/artisan config:cache
+php /var/www/smartrh/artisan route:cache
+
+echo "Starting PHP-FPM..."
 exec php-fpm
