@@ -43,12 +43,9 @@ done
 echo "Database is ready!"
 
 echo "Running migrations..."
-# --graceful is not available in Laravel, so we catch errors from
-# already-existing tables (idempotent redeployments) and continue
+
 if ! php /var/www/smartrh/artisan migrate --force --no-interaction; then
-    echo "WARNING: migrate exited with error - checking if all migrations are complete..."
-    php /var/www/smartrh/artisan migrate:status --force --no-interaction
-    # Only abort if migrate:status itself fails (real DB connection issue)
+    echo "WARNING: migrate exited with an error, continuing startup..."
 fi
 
 echo "Checking if seeding needed..."
