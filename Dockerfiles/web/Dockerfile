@@ -1,5 +1,7 @@
 FROM nginx:alpine
 
+RUN apk add --no-cache curl
+
 # nginx config
 COPY Dockerfiles/web/nginx.conf /etc/nginx/conf.d/default.conf
 
