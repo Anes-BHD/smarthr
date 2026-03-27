@@ -25,6 +25,14 @@ use App\Http\Controllers\Admin\EmployeeDetailsController;
 
 include __DIR__ . '/auth.php';
 
+// Health check routes for load balancer / ECS
+Route::get('/up', function () {
+    return response('OK', 200);
+});
+Route::get('/health', function () {
+    return response('OK', 200);
+});
+
 Route::middleware(['auth'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('home');
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
