@@ -32,10 +32,7 @@ Route::get('/up', function () {
     try {
         DB::connection()->getPdo();
 
-        $redisConnection = Redis::connection();
-        if (method_exists($redisConnection, 'ping')) {
-            $redisConnection->ping();
-        }
+        Redis::connection()->ping();
 
         return response('OK', 200);
     } catch (\Exception $e) {
