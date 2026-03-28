@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Admin\ChatController;
@@ -29,12 +31,18 @@ include __DIR__ . '/auth.php';
 Route::get('/up', function () {
     try {
         DB::connection()->getPdo();
-        Cache::store('redis')->ping();
+
+        $redisConnection = Redis::connection();
+        if (method_exists($redisConnection, 'ping')) {
+            $redisConnection->ping();
+        }
+
         return response('OK', 200);
     } catch (\Exception $e) {
         return response('Service Unavailable', 503);
     }
 });
+
 Route::get('/health', function () {
     return response('OK', 200);
 });
