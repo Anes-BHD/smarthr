@@ -27,7 +27,13 @@ include __DIR__ . '/auth.php';
 
 // Health check routes for load balancer / ECS
 Route::get('/up', function () {
-    return response('OK', 200);
+    try {
+        DB::connection()->getPdo();
+        Cache::store('redis')->ping();
+        return response('OK', 200);
+    } catch (\Exception $e) {
+        return response('Service Unavailable', 503);
+    }
 });
 Route::get('/health', function () {
     return response('OK', 200);
