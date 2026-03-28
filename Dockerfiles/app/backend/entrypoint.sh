@@ -42,18 +42,20 @@ until (echo > /dev/tcp/${DB_HOST}/3306) 2>/dev/null; do
 done
 echo "Database is ready!"
 
-echo "Running migrations..."
+echo "Checking migration status..."
+MIGRATION_COUNT=$(mysql -h "${DB_HOST}" -P "${DB_PORT:-3306}" \
+    -u "${DB_USERNAME}" -p"${DB_PASSWORD}" "${DB_DATABASE}" \
+    --skip-column-names --silent \
+    -e "SELECT COUNT(*) FROM migrations;" 2>/dev/null || echo "0")
 
-if ! php /var/www/smartrh/artisan migrate --force --no-interaction; then
-    echo "WARNING: migrate exited with an error, continuing startup..."
-fi
+if [ "$MIGRATION_COUNT" = "0" ]; then
+    echo "No migrations found, running migrations..."
+    php /var/www/smartrh/artisan migrate --force --no-interaction
 
-echo "Checking if seeding needed..."
-USER_COUNT=$(php /var/www/smartrh/artisan tinker \
-    --execute="echo \App\Models\User::count();" 2>/dev/null | tail -1 | tr -d '[:space:]')
-if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
     echo "Seeding database..."
     php /var/www/smartrh/artisan db:seed --force
+else
+    echo "Migrations already applied ($MIGRATION_COUNT), skipping..."
 fi
 
 echo "Caching config..."
