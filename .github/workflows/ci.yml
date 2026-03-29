@@ -137,7 +137,6 @@ jobs:
       continue-on-error: true
       with:
         sarif_file: dependency-check-report/dependency-check-report.sarif
-
   build-and-push:
     runs-on: ubuntu-latest
     needs: test
@@ -145,72 +144,66 @@ jobs:
     environment: staging
     outputs:
       backend_image: ${{ steps.meta.outputs.backend_image }}
-      frontend_image: ${{ steps.meta.outputs.frontend_image }}
       web_image: ${{ steps.meta.outputs.web_image }}
       redis_image: ${{ steps.meta.outputs.redis_image }}
- 
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 1
-    
+
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }} 
- 
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: 'us-east-1'
+
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
- 
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-      # Install composer deps so vendor/ is present for the backend image
     - name: Setup PHP 8.2
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.2'
         extensions: pdo_mysql, mbstring, bcmath, gd, zip
         tools: composer:v2
- 
 
     - name: Install Composer dependencies (production)
       run: composer install --no-dev --optimize-autoloader --no-progress
- 
-      # Build frontend assets before baking them into images
+
     - name: Setup Node 18
       uses: actions/setup-node@v3
       with:
         node-version: '18'
         cache: 'npm'
- 
+
     - name: Install & build frontend assets
       run: |
         npm ci
         npm run build --if-present
- 
 
-    # Emit image URIs for the deploy job
     - name: Compute image tags
       id: meta
       run: |
         REGISTRY="${{ steps.login-ecr.outputs.registry }}"
-        REPO="smarthr"   
+        REPO="smarthr"
         SHA="${{ github.sha }}"
-        echo "backend_image=${REGISTRY}/${REPO}:backend-${SHA}"   >> "$GITHUB_OUTPUT"
-        echo "web_image=${REGISTRY}/${REPO}:web-${SHA}"           >> "$GITHUB_OUTPUT"
-        echo "redis_image=${REGISTRY}/${REPO}:redis-${SHA}" >> "$GITHUB_OUTPUT"
-      # echo "frontend_image=${REGISTRY}/${REPO}:frontend-${SHA}" >> "$GITHUB_OUTPUT"
-    
+        echo "backend_image=${REGISTRY}/${REPO}:backend-${SHA}" >> "$GITHUB_OUTPUT"
+        echo "web_image=${REGISTRY}/${REPO}:web-${SHA}"         >> "$GITHUB_OUTPUT"
+        echo "redis_image=${REGISTRY}/${REPO}:redis-${SHA}"     >> "$GITHUB_OUTPUT"
+
     - name: Build & push Redis image
       uses: docker/build-push-action@v5
       with:
@@ -236,18 +229,6 @@ jobs:
           type=gha
           ${{ steps.login-ecr.outputs.registry }}/smarthr:backend-latest
         cache-to: type=gha,mode=max
- 
-#    - name: Build & push frontend image
-#      uses: docker/build-push-action@v5
-#      with:
-#        context: .
-#        file: ./Dockerfiles/app/frontend/Dockerfile
-#        push: true
-#        tags: |
-#          
-#          /smarthr:frontend-latest
-#        cache-from: type=gha
-#        cache-to: type=gha,mode=max
 
     - name: Build & push web (Nginx) image
       uses: docker/build-push-action@v5
@@ -260,6 +241,72 @@ jobs:
           ${{ steps.login-ecr.outputs.registry }}/smarthr:web-latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: staging      
+
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: 'us-east-1'
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Inject backend image
+      id: render-backend  
+      uses: aws-actions/amazon-ecs-render-task-definition@v1  
+      with: 
+        task-definition: smarthr-taskdef-app-revision2.json 
+        container-name: backend 
+        image: ${{ needs.build-and-push.outputs.backend_image }}
+        
+    - name: Inject web image  
+      id: render-app  
+      uses: aws-actions/amazon-ecs-render-task-definition@v1  
+      with: 
+        task-definition: ${{ steps.render-backend.outputs.task-definition }}
+        container-name: web 
+        image: ${{ needs.build-and-push.outputs.web_image }}  
+
+    - name: Render cache task definition
+      id: render-cache
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: smarthr-taskdef-cache-revision2.json
+        container-name: redis
+        image: ${{ needs.build-and-push.outputs.redis_image }}
+
+    - name: Deploy cache service
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.render-cache.outputs.task-definition }}
+        service: smarthr-taskdef-cache-service
+        cluster: smarthr-cluster
+        wait-for-service-stability: true
+
+    - name: Deploy app service
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.render-app.outputs.task-definition }}
+        service: smarthr-taskdef-app-service
+        cluster: smarthr-cluster
+        wait-for-service-stability: true
+
+
+    - name: Deployment summary
+      run: |
+        echo "✅ Deployment completed successfully"
+        echo "Backend image: ${{ needs.build-and-push.outputs.backend_image }}"
+        echo "Web image:     ${{ needs.build-and-push.outputs.web_image }}"
+        echo "Redis image:   ${{ needs.build-and-push.outputs.redis_image }}"
 
   vulnerability-scan:
     name: Trivy Vulnerability Scan
