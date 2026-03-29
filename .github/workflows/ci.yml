@@ -301,7 +301,7 @@ jobs:
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
         task-definition: smarthr-taskdef-cache-revision2.json
-        container-name: smarthr-redis
+        container-name: smarthr-cache
         image: ${{ steps.meta.outputs.redis_image }}
 
     - name: Deploy cache service
