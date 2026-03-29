@@ -288,7 +288,7 @@ jobs:
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.render-cache.outputs.task-definition }}
-        service: smarthr-taskdef-cache-service
+        service: smarthr-taskdef-cache-service-jmpm422d
         cluster: smarthr-cluster
         wait-for-service-stability: true
 
@@ -296,7 +296,7 @@ jobs:
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.render-app.outputs.task-definition }}
-        service: smarthr-taskdef-app-service
+        service: smarthr-taskdef-app-service-uq1klkgk
         cluster: smarthr-cluster
         wait-for-service-stability: true
 
