@@ -42,23 +42,6 @@ until (echo > /dev/tcp/${DB_HOST}/3306) 2>/dev/null; do
 done
 echo "Database is ready!"
 
-echo "Checking migration status..."
-TABLE_EXISTS=$(mysql -h "${DB_HOST}" -P "${DB_PORT:-3306}" \
-    -u "${DB_USERNAME}" -p"${DB_PASSWORD}" \
-    --skip-column-names --silent \
-    -e "SELECT COUNT(*) FROM information_schema.tables 
-        WHERE table_schema='${DB_DATABASE}' 
-        AND table_name='users';" 2>/dev/null || echo "0")
-
-if [ "$TABLE_EXISTS" = "0" ]; then
-    echo "Fresh database detected, running migrations..."
-    php /var/www/smartrh/artisan migrate --force --no-interaction
-    echo "Seeding database..."
-    php /var/www/smartrh/artisan db:seed --force
-else
-    echo "Database already set up, skipping migrations..."
-fi
-
 echo "Caching config..."
 php /var/www/smartrh/artisan config:cache
 php /var/www/smartrh/artisan route:cache
