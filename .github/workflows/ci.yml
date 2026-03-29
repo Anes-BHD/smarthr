@@ -302,7 +302,7 @@ jobs:
           jq '
             .containerDefinitions |= map(select(.name == "smarthr-backend")) |
             .containerDefinitions[0].command = ["php", "artisan", "migrate", "--force", "--no-interaction"] |
-            del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
+            del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy, .tags)
           ' > /tmp/migrate-taskdef.json
 
         echo "--- Validating JSON ---"
