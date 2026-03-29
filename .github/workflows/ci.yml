@@ -283,7 +283,7 @@ jobs:
       with: 
         task-definition: smarthr-taskdef-app-revision2.json 
         container-name: backend 
-        image: ${{ needs.build-and-push.outputs.backend_image }}
+        image: ${{ steps.meta.outputs.backend_image }}
         
     - name: Inject web image  
       id: render-app  
@@ -291,7 +291,7 @@ jobs:
       with: 
         task-definition: ${{ steps.render-backend.outputs.task-definition }}
         container-name: web 
-        image: ${{ needs.build-and-push.outputs.web_image }}  
+        image: ${{ steps.meta.outputs.web_image }}  
 
     - name: Render cache task definition
       id: render-cache
@@ -299,7 +299,7 @@ jobs:
       with:
         task-definition: smarthr-taskdef-cache-revision2.json
         container-name: redis
-        image: ${{ needs.build-and-push.outputs.redis_image }}
+        image: ${{ steps.meta.outputs.redis_image }}
 
     - name: Deploy cache service
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
