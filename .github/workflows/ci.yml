@@ -305,7 +305,10 @@ jobs:
             .containerDefinitions[0].environment += [
               {"name": "CACHE_STORE", "value": "array"},
               {"name": "SESSION_DRIVER", "value": "array"},
-              {"name": "QUEUE_CONNECTION", "value": "sync"}
+              {"name": "QUEUE_CONNECTION", "value": "sync"},
+              {"name": "DB_CONNECTION", "value": "mysql"},
+              {"name": "APP_KEY", "value": "${{ secrets.APP_KEY }}"},
+              {"name": "APP_ENV", "value": "production"}
             ] |
             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy, .tags)
           ' > /tmp/migrate-taskdef.json
