@@ -302,6 +302,11 @@ jobs:
           jq '
             .containerDefinitions |= map(select(.name == "smarthr-backend")) |
             .containerDefinitions[0].command = ["php", "artisan", "migrate", "--force", "--no-interaction"] |
+            .containerDefinitions[0].environment += [
+              {"name": "CACHE_STORE", "value": "array"},
+              {"name": "SESSION_DRIVER", "value": "array"},
+              {"name": "QUEUE_CONNECTION", "value": "sync"}
+            ] |
             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy, .tags)
           ' > /tmp/migrate-taskdef.json
 
