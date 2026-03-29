@@ -5,7 +5,7 @@ WORKDIR /var/www/smartrh
 RUN apt-get update && apt-get install -y \
     git curl libpng-dev libonig-dev libxml2-dev \
     zip unzip libzip-dev libfreetype6-dev libjpeg-dev \
-    libicu-dev wget \
+    libicu-dev wget default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -26,9 +26,7 @@ RUN echo "listen = 0.0.0.0:9000" >> /usr/local/etc/php-fpm.d/www.conf
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# ✅ Copy application source (vendor/ already built by CI runner)
 COPY . .
-
 
 RUN mkdir -p storage/framework/{sessions,views,cache} bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \

@@ -43,19 +43,20 @@ done
 echo "Database is ready!"
 
 echo "Checking migration status..."
-MIGRATION_COUNT=$(mysql -h "${DB_HOST}" -P "${DB_PORT:-3306}" \
-    -u "${DB_USERNAME}" -p"${DB_PASSWORD}" "${DB_DATABASE}" \
+TABLE_EXISTS=$(mysql -h "${DB_HOST}" -P "${DB_PORT:-3306}" \
+    -u "${DB_USERNAME}" -p"${DB_PASSWORD}" \
     --skip-column-names --silent \
-    -e "SELECT COUNT(*) FROM migrations;" 2>/dev/null || echo "0")
+    -e "SELECT COUNT(*) FROM information_schema.tables 
+        WHERE table_schema='${DB_DATABASE}' 
+        AND table_name='users';" 2>/dev/null || echo "0")
 
-if [ "$MIGRATION_COUNT" = "0" ]; then
-    echo "No migrations found, running migrations..."
+if [ "$TABLE_EXISTS" = "0" ]; then
+    echo "Fresh database detected, running migrations..."
     php /var/www/smartrh/artisan migrate --force --no-interaction
-
     echo "Seeding database..."
     php /var/www/smartrh/artisan db:seed --force
 else
-    echo "Migrations already applied ($MIGRATION_COUNT), skipping..."
+    echo "Database already set up, skipping migrations..."
 fi
 
 echo "Caching config..."
