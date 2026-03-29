@@ -298,14 +298,18 @@ jobs:
     - name: Register migrate task definition
       id: register-migrate-taskdef
       run: |
-        TASKDEF=$(cat ${{ steps.render-migrate.outputs.task-definition }} | \
+        cat ${{ steps.render-migrate.outputs.task-definition }} | \
           jq '
             .containerDefinitions |= map(select(.name == "smarthr-backend")) |
             .containerDefinitions[0].command = ["php", "artisan", "migrate", "--force", "--no-interaction"] |
             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
-          ')
-        TASK_DEF_ARN=$(echo "$TASKDEF" | aws ecs register-task-definition \
-          --cli-input-json file:///dev/stdin \
+          ' > /tmp/migrate-taskdef.json
+
+        echo "--- Validating JSON ---"
+        cat /tmp/migrate-taskdef.json | jq .
+
+        TASK_DEF_ARN=$(aws ecs register-task-definition \
+          --cli-input-json file:///tmp/migrate-taskdef.json \
           --query 'taskDefinition.taskDefinitionArn' \
           --output text)
         echo "task_def_arn=$TASK_DEF_ARN" >> $GITHUB_OUTPUT
