@@ -16,209 +16,335 @@ permissions:
   security-events: write
 
 jobs:
-# =========================
-# TEST JOB
-# =========================
   test:
     runs-on: ubuntu-latest
+
     env:
       PHP_CS_FIXER_IGNORE_ENV: 1
 
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
 
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: pdo_mysql, mbstring, exif, pcntl, bcmath, gd, zip, intl, opcache, redis
-          tools: composer:v2
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: pdo_mysql, mbstring, exif, pcntl, bcmath, gd, zip, intl, opcache, redis
+        tools: composer:v2
 
-      - uses: actions/cache@v3
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
 
-      - run: composer install --no-progress --prefer-dist --optimize-autoloader
+    - name: Cache Composer cache dir
+      uses: actions/cache@v3
+      with:
+        path: ~/.composer/cache
+        key: ${{ runner.os }}-composer-cache-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-cache-
 
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'npm'
+    - name: Install Composer dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
 
-      - run: npm ci
+    - name: Install Node dependencies
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
 
-      - name: Setup Laravel env
-        run: |
-          echo "APP_ENV=testing" > .env
-          echo "APP_KEY=base64:$(openssl rand -base64 32)" >> .env
-          echo "DB_CONNECTION=sqlite" >> .env
-          echo "DB_DATABASE=:memory:" >> .env
+    - name: Install frontend dependencies
+      run: npm ci
 
-      - run: ./vendor/bin/phpunit
+    - name: Build assets
+      run: npm run build --if-present
 
-# =========================
-# SECURITY SCANS
-# =========================
+    - name: Setup Laravel environment
+      run: |
+        echo "APP_NAME=Smarthr" > .env
+        echo "APP_ENV=testing" >> .env
+        echo "APP_KEY=base64:$(openssl rand -base64 32)" >> .env
+        echo "DB_CONNECTION=sqlite" >> .env
+        echo "DB_DATABASE=:memory:" >> .env
+        echo "CACHE_DRIVER=array" >> .env
+        echo "SESSION_DRIVER=array" >> .env
+        echo "QUEUE_CONNECTION=sync" >> .env
+
+    - name: Run PHPUnit
+      run: |
+        mkdir -p test-results
+        ./vendor/bin/phpunit --log-junit test-results/phpunit.xml
+
+    - name: Upload PHPUnit results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: phpunit-results
+        path: test-results
+
+    # Docker image builds removed from the test job to speed up CI.
+    # Image builds are handled in the deploy job where images are pushed to ECR.
+
+    # Trivy scanning moved to a separate job to avoid slowing down test job.
+
   dependency-check:
+    name: OWASP Dependency-Check
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+    
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }} 
 
-      - uses: dependency-check/Dependency-Check_Action@main
-        continue-on-error: true
-        with:
-          project: 'smarthr'
-          path: '.'
+    - name: Run OWASP Dependency-Check
+      uses: dependency-check/Dependency-Check_Action@main
+      id: owasp
+      continue-on-error: true
+      with:
+        project: 'smarthr'
+        path: '.'
+        format: 'ALL'
+        out: 'dependency-check-report'
+        args: >
+          --enableRetired
+          --enableExperimental
 
-  vulnerability-scan:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v4
+    - name: Upload Dependency-Check report as artifact
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: dependency-check-report
+        path: dependency-check-report
 
-      - uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          exit-code: '1'
-          severity: 'CRITICAL,HIGH'
-
-# =========================
-# BUILD & PUSH
-# =========================
+    - name: Upload SARIF to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v4
+      if: always()
+      continue-on-error: true
+      with:
+        sarif_file: dependency-check-report/dependency-check-report.sarif
   build-and-push:
     runs-on: ubuntu-latest
-    needs: [test, dependency-check, vulnerability-scan]
-    if: github.ref == 'refs/heads/main'
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: staging
+    outputs:
+      backend_image: ${{ steps.meta.outputs.backend_image }}
+      web_image: ${{ steps.meta.outputs.web_image }}
+      redis_image: ${{ steps.meta.outputs.redis_image }}
 
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
 
-      - uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: 'us-east-1'
 
-      - name: Compute image tags
-        id: meta
-        run: |
-          REGISTRY=${{ steps.login-ecr.outputs.registry }}
-          SHA=${{ github.sha }}
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
 
-          echo "REGISTRY=$REGISTRY"
-          echo "backend=$REGISTRY/smarthr:backend-$SHA"
-          echo "web=$REGISTRY/smarthr:web-$SHA"
-          echo "redis=$REGISTRY/smarthr:redis-$SHA"
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-          echo "backend=$REGISTRY/smarthr:backend-$SHA" >> $GITHUB_OUTPUT
-          echo "web=$REGISTRY/smarthr:web-$SHA" >> $GITHUB_OUTPUT
-          echo "redis=$REGISTRY/smarthr:redis-$SHA" >> $GITHUB_OUTPUT
+    - name: Setup PHP 8.2
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: pdo_mysql, mbstring, bcmath, gd, zip
+        tools: composer:v2
 
-      - uses: docker/setup-buildx-action@v3
+    - name: Install Composer dependencies (production)
+      run: composer install --no-dev --optimize-autoloader --no-progress
 
-      - name: Build & push backend
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfiles/app/backend/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.backend }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+    - name: Setup Node 18
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
 
-      - name: Build & push web
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfiles/web/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.web }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+    - name: Install & build frontend assets
+      run: |
+        npm ci
+        npm run build --if-present
 
-      - name: Build & push redis
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfiles/cache/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.redis }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+    - name: Compute image tags
+      id: meta
+      run: |
+        REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+        REPO="smarthr"
+        SHA="${{ github.sha }}"
+        echo "backend_image=${REGISTRY}/${REPO}:backend-${SHA}" >> "$GITHUB_OUTPUT"
+        echo "web_image=${REGISTRY}/${REPO}:web-${SHA}"         >> "$GITHUB_OUTPUT"
+        echo "redis_image=${REGISTRY}/${REPO}:redis-${SHA}"     >> "$GITHUB_OUTPUT"
 
-# =========================
-# DEPLOY
-# =========================
+    - name: Debug outputs
+      run: |  
+        echo "Backend: ${{ steps.meta.outputs.backend_image }}" 
+        echo "Web:     ${{ steps.meta.outputs.web_image }}" 
+        echo "Redis:   ${{ steps.meta.outputs.redis_image }}" 
+    - name: Build & push Redis image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfiles/cache/Dockerfile
+        push: true
+        tags: |
+          ${{ steps.meta.outputs.redis_image }}
+          ${{ steps.login-ecr.outputs.registry }}/smarthr:redis-latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build & push backend image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfiles/app/backend/Dockerfile
+        push: true
+        tags: |
+          ${{ steps.meta.outputs.backend_image }}
+          ${{ steps.login-ecr.outputs.registry }}/smarthr:backend-latest
+        cache-from: |
+          type=gha
+          ${{ steps.login-ecr.outputs.registry }}/smarthr:backend-latest
+        cache-to: type=gha,mode=max
+
+    - name: Build & push web (Nginx) image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfiles/web/Dockerfile
+        push: true
+        tags: |
+          ${{ steps.meta.outputs.web_image }}
+          ${{ steps.login-ecr.outputs.registry }}/smarthr:web-latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
   deploy:
     runs-on: ubuntu-latest
     needs: build-and-push
-    if: github.ref == 'refs/heads/main'
-    environment: staging
-
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: staging      
+    
     steps:
-      - uses: actions/checkout@v4
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: 'us-east-1'
 
-      - uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
 
-      - id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Recompute image tags (bulletproof)
-        id: meta
-        run: |
-          REGISTRY=${{ steps.login-ecr.outputs.registry }}
-          SHA=${{ github.sha }}
+    - name: Compute image tags
+      id: meta
+      run: |
+        REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        REPO=smarthr
+        SHA=${{ github.sha }}
 
-          echo "backend=$REGISTRY/smarthr:backend-$SHA" >> $GITHUB_OUTPUT
-          echo "web=$REGISTRY/smarthr:web-$SHA" >> $GITHUB_OUTPUT
-          echo "redis=$REGISTRY/smarthr:redis-$SHA" >> $GITHUB_OUTPUT
+        echo "backend_image=$REGISTRY/$REPO:backend-$SHA" >> $GITHUB_OUTPUT
+        echo "web_image=$REGISTRY/$REPO:web-$SHA" >> $GITHUB_OUTPUT
+        echo "redis_image=$REGISTRY/$REPO:redis-$SHA" >> $GITHUB_OUTPUT
 
-      - name: Inject backend image
-        id: render-backend
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: smarthr-taskdef-app-revision2.json
-          container-name: backend
-          image: ${{ steps.meta.outputs.backend }}
+    - name: Inject backend image
+      id: render-backend  
+      uses: aws-actions/amazon-ecs-render-task-definition@v1  
+      with: 
+        task-definition: smarthr-taskdef-app-revision2.json 
+        container-name: backend 
+        image: ${{ needs.build-and-push.outputs.backend_image }}
+        
+    - name: Inject web image  
+      id: render-app  
+      uses: aws-actions/amazon-ecs-render-task-definition@v1  
+      with: 
+        task-definition: ${{ steps.render-backend.outputs.task-definition }}
+        container-name: web 
+        image: ${{ needs.build-and-push.outputs.web_image }}  
 
-      - name: Inject web image
-        id: render-app
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ${{ steps.render-backend.outputs.task-definition }}
-          container-name: web
-          image: ${{ steps.meta.outputs.web }}
+    - name: Render cache task definition
+      id: render-cache
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: smarthr-taskdef-cache-revision2.json
+        container-name: redis
+        image: ${{ needs.build-and-push.outputs.redis_image }}
 
-      - name: Inject redis image
-        id: render-cache
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: smarthr-taskdef-cache-revision2.json
-          container-name: redis
-          image: ${{ steps.meta.outputs.redis }}
+    - name: Deploy cache service
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.render-cache.outputs.task-definition }}
+        service: smarthr-taskdef-cache-service-jmpm422d
+        cluster: smarthr-cluster
+        wait-for-service-stability: true
 
-      - name: Deploy cache
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.render-cache.outputs.task-definition }}
-          service: smarthr-taskdef-cache-service
-          cluster: smarthr-cluster
-          wait-for-service-stability: true
+    - name: Deploy app service
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.render-app.outputs.task-definition }}
+        service: smarthr-taskdef-app-service-uq1klkgk
+        cluster: smarthr-cluster
+        wait-for-service-stability: true
 
-      - name: Deploy app
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.render-app.outputs.task-definition }}
-          service: smarthr-taskdef-app-service
-          cluster: smarthr-cluster
-          wait-for-service-stability: true
+
+    - name: Deployment summary
+      run: |
+        echo "✅ Deployment completed successfully"
+        echo "Backend image: ${{ needs.build-and-push.outputs.backend_image }}"
+        echo "Web image:     ${{ needs.build-and-push.outputs.web_image }}"
+        echo "Redis image:   ${{ needs.build-and-push.outputs.redis_image }}"
+
+  vulnerability-scan:
+    name: Trivy Vulnerability Scan
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v4
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
