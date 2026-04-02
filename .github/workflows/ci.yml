@@ -355,6 +355,7 @@ jobs:
           exit 1
         fi
         echo "✅ Migration completed successfully"
+    
 
   deploy:
     runs-on: ubuntu-latest
