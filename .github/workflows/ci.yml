@@ -355,7 +355,18 @@ jobs:
           exit 1
         fi
         echo "✅ Migration completed successfully"
-    
+    - name: Run seeder if fresh database
+      run: |
+        # Check if users table is empty (fresh DB)
+        TASK_ARN=$(aws ecs run-task \
+          --cluster smarthr-cluster \
+          --task-definition ${{ steps.register-migrate-taskdef.outputs.task_def_arn }} \
+          --launch-type FARGATE \
+          --network-configuration '${{ secrets.ECS_NETWORK_CONFIG }}' \
+          --overrides '{"containerOverrides":[{"name":"smarthr-backend","command":["php","artisan","db:seed","--force"]}]}' \
+          --query 'tasks[0].taskArn' \
+          --output text)
+        aws ecs wait tasks-stopped --cluster smarthr-cluster --tasks $TASK_ARN
 
   deploy:
     runs-on: ubuntu-latest
