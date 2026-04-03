@@ -261,186 +261,54 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-  migrate:
+        
+  deploy:
     runs-on: ubuntu-latest
     needs: build-and-push
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: staging
 
     steps:
-    - uses: actions/checkout@v4
-
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: 'us-east-1'
-
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
-
-    - name: Compute image tag
-      id: meta
-      run: |
-        REGISTRY=${{ steps.login-ecr.outputs.registry }}
-        echo "backend_image=$REGISTRY/smarthr:backend-${{ github.sha }}" >> $GITHUB_OUTPUT
-
-    - name: Inject backend image into task definition
-      id: render-migrate
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
-      with:
-        task-definition: smarthr-taskdef-app-revision2.json
-        container-name: smarthr-backend
-        image: ${{ steps.meta.outputs.backend_image }}
-
-    - name: Register migrate task definition
-      id: register-migrate-taskdef
-      run: |
-        cat ${{ steps.render-migrate.outputs.task-definition }} | \
-          jq '
-            .containerDefinitions |= map(select(.name == "smarthr-backend")) |
-            .containerDefinitions[0].command = ["php", "artisan", "migrate", "--force", "--no-interaction"] |
-            .containerDefinitions[0].environment += [
-              {"name": "CACHE_STORE", "value": "array"},
-              {"name": "SESSION_DRIVER", "value": "array"},
-              {"name": "QUEUE_CONNECTION", "value": "sync"},
-              {"name": "DB_CONNECTION", "value": "mysql"},
-              {"name": "APP_KEY", "value": "${{ secrets.APP_KEY }}"},
-              {"name": "APP_ENV", "value": "production"}
-            ] |
-            del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy, .tags)
-          ' > /tmp/migrate-taskdef.json
-
-        echo "--- Validating JSON ---"
-        cat /tmp/migrate-taskdef.json | jq .
-
-        TASK_DEF_ARN=$(aws ecs register-task-definition \
-          --cli-input-json file:///tmp/migrate-taskdef.json \
-          --query 'taskDefinition.taskDefinitionArn' \
-          --output text)
-        echo "task_def_arn=$TASK_DEF_ARN" >> $GITHUB_OUTPUT
-
-    - name: Run migration task
-      id: run-migrate
-      run: |
-        TASK_ARN=$(aws ecs run-task \
-          --cluster smarthr-cluster \
-          --task-definition ${{ steps.register-migrate-taskdef.outputs.task_def_arn }} \
-          --launch-type FARGATE \
-          --network-configuration '${{ secrets.ECS_NETWORK_CONFIG }}' \
-          --query 'tasks[0].taskArn' \
-          --output text)
-        echo "task_arn=$TASK_ARN" >> $GITHUB_OUTPUT
-        echo "Migration task started: $TASK_ARN"
-
-    - name: Wait for migration task to complete
-      run: |
-        echo "Waiting for migration task to finish..."
-        aws ecs wait tasks-stopped \
-          --cluster smarthr-cluster \
-          --tasks ${{ steps.run-migrate.outputs.task_arn }}
-
-    - name: Check migration exit code
-      run: |
-        EXIT_CODE=$(aws ecs describe-tasks \
-          --cluster smarthr-cluster \
-          --tasks ${{ steps.run-migrate.outputs.task_arn }} \
-          --query 'tasks[0].containers[0].exitCode' \
-          --output text)
-        echo "Migration exit code: $EXIT_CODE"
-        if [ "$EXIT_CODE" != "0" ]; then
-          echo "❌ Migration failed with exit code $EXIT_CODE"
-          exit 1
-        fi
-        echo "✅ Migration completed successfully"
-    - name: Run seeder if fresh database
-      run: |
-        # Check if users table is empty (fresh DB)
-        TASK_ARN=$(aws ecs run-task \
-          --cluster smarthr-cluster \
-          --task-definition ${{ steps.register-migrate-taskdef.outputs.task_def_arn }} \
-          --launch-type FARGATE \
-          --network-configuration '${{ secrets.ECS_NETWORK_CONFIG }}' \
-          --overrides '{"containerOverrides":[{"name":"smarthr-backend","command":["php","artisan","db:seed","--force"]}]}' \
-          --query 'tasks[0].taskArn' \
-          --output text)
-        aws ecs wait tasks-stopped --cluster smarthr-cluster --tasks $TASK_ARN
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: migrate
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: staging
-
-    steps:
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: 'us-east-1'
-
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
-
-    - uses: actions/checkout@v4
-
-    - name: Compute image tags
-      id: meta
-      run: |
-        REGISTRY=${{ steps.login-ecr.outputs.registry }}
-        REPO=smarthr
-        SHA=${{ github.sha }}
-        echo "backend_image=$REGISTRY/$REPO:backend-$SHA" >> $GITHUB_OUTPUT
-        echo "web_image=$REGISTRY/$REPO:web-$SHA"         >> $GITHUB_OUTPUT
-        echo "redis_image=$REGISTRY/$REPO:redis-$SHA"     >> $GITHUB_OUTPUT
-
-    - name: Inject backend image
-      id: render-backend
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
-      with:
-        task-definition: smarthr-taskdef-app-revision2.json
-        container-name: smarthr-backend
-        image: ${{ steps.meta.outputs.backend_image }}
-
-    - name: Inject web image
-      id: render-app
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
-      with:
-        task-definition: ${{ steps.render-backend.outputs.task-definition }}
-        container-name: smarthr-web
-        image: ${{ steps.meta.outputs.web_image }}
-
-    - name: Render cache task definition
-      id: render-cache
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
-      with:
-        task-definition: smarthr-taskdef-cache-revision2.json
-        container-name: smarthr-cache
-        image: ${{ steps.meta.outputs.redis_image }}
 
     - name: Deploy cache service
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.render-cache.outputs.task-definition }}
-        service: smarthr-taskdef-cache-service
-        cluster: smarthr-cluster
-        wait-for-service-stability: true
+      run: |
+        aws ecs update-service \
+          --cluster smarthr-cluster \
+          --service smarthr-taskdef-cache-service \
+          --force-new-deployment \
+          --region us-east-1
 
-    - name: Deploy app service
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.render-app.outputs.task-definition }}
-        service: smarthr-taskdef-app-service
-        cluster: smarthr-cluster
-        wait-for-service-stability: true
+    - name: Deploy app service (backend + web)
+      run: |
+        aws ecs update-service \
+          --cluster smarthr-cluster \
+          --service smarthr-taskdef-app-service \
+          --force-new-deployment \
+          --region us-east-1
+
+    - name: Wait for cache service to stabilize
+      run: |
+        aws ecs wait services-stable \
+          --cluster smarthr-cluster \
+          --services smarthr-taskdef-cache-service \
+          --region us-east-1
+
+    - name: Wait for app service to stabilize
+      run: |
+        aws ecs wait services-stable \
+          --cluster smarthr-cluster \
+          --services smarthr-taskdef-app-service \
+          --region us-east-1
 
     - name: Deployment summary
       run: |
         echo "✅ Deployment completed successfully"
-        echo "Backend image: ${{ steps.meta.outputs.backend_image }}"
-        echo "Web image:     ${{ steps.meta.outputs.web_image }}"
-        echo "Redis image:   ${{ steps.meta.outputs.redis_image }}"
+        echo "Backend image: ${{ needs.build-and-push.outputs.backend_image }}"
+        echo "Web image:     ${{ needs.build-and-push.outputs.web_image }}"
+        echo "Redis image:   ${{ needs.build-and-push.outputs.redis_image }}"
