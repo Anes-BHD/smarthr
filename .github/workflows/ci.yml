@@ -280,7 +280,7 @@ jobs:
       run: |
         aws ecs update-service \
           --cluster smarthr-cluster \
-          --service smarthr-taskdef-cache-service \
+          --service smarthr-taskdef-cache-service-yhggww4u\
           --force-new-deployment \
           --region us-east-1
 
@@ -288,7 +288,7 @@ jobs:
       run: |
         aws ecs update-service \
           --cluster smarthr-cluster \
-          --service smarthr-taskdef-app-service \
+          --service smarthr-taskdef-app-service-414nsswt \
           --force-new-deployment \
           --region us-east-1
 
@@ -296,14 +296,14 @@ jobs:
       run: |
         aws ecs wait services-stable \
           --cluster smarthr-cluster \
-          --services smarthr-taskdef-cache-service \
+          --services smarthr-taskdef-cache-service-yhggww4u\
           --region us-east-1
 
     - name: Wait for app service to stabilize
       run: |
         aws ecs wait services-stable \
           --cluster smarthr-cluster \
-          --services smarthr-taskdef-app-service \
+          --services smarthr-taskdef-app-service-414nsswt \
           --region us-east-1
 
     - name: Deployment summary
