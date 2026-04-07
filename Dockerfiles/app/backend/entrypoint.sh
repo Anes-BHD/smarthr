@@ -42,6 +42,22 @@ until (echo > /dev/tcp/${DB_HOST}/3306) 2>/dev/null; do
 done
 echo "Database is ready!"
 
+
+echo "Running migrations..."
+if ! php /var/www/smartrh/artisan migrate --force --no-interaction; then
+    echo "WARNING: migrate exited with an error, continuing startup..."
+fi
+echo "Checking if seeding needed..."
+USER_COUNT=$(php /var/www/smartrh/artisan tinker \
+    --execute="echo \App\Models\User::count();" 2>/dev/null | tail -1 | tr -d '[:space:]')
+if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
+    echo "Seeding database..."
+    php /var/www/smartrh/artisan db:seed --force --no-interaction
+else
+    echo "Users already exist, skipping seeding."
+fi
+
+
 echo "Caching config..."
 php /var/www/smartrh/artisan config:cache
 php /var/www/smartrh/artisan route:cache
