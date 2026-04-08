@@ -202,17 +202,6 @@ jobs:
     - name: Install Composer dependencies (production)
       run: composer install --no-dev --optimize-autoloader --no-progress
 
-    - name: Setup Node 18
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        cache: 'npm'
-
-    - name: Install & build frontend assets
-      run: |
-        npm ci
-        npm run build --if-present
-
     - name: Compute image tags
       id: meta
       run: |
@@ -261,7 +250,6 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-        
   deploy:
     runs-on: ubuntu-latest
     needs: build-and-push
@@ -280,7 +268,7 @@ jobs:
       run: |
         aws ecs update-service \
           --cluster smarthr-cluster \
-          --service smarthr-taskdef-cache-service-yhggww4u\
+          --service smarthr-taskdef-cache-service-yhggww4u \
           --force-new-deployment \
           --region us-east-1
 
@@ -296,7 +284,7 @@ jobs:
       run: |
         aws ecs wait services-stable \
           --cluster smarthr-cluster \
-          --services smarthr-taskdef-cache-service-yhggww4u\
+          --services smarthr-taskdef-cache-service-yhggww4u \
           --region us-east-1
 
     - name: Wait for app service to stabilize
