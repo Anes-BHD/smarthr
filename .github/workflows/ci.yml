@@ -212,6 +212,17 @@ jobs:
         echo "web_image=${REGISTRY}/${REPO}:web-${SHA}"         >> "$GITHUB_OUTPUT"
         echo "redis_image=${REGISTRY}/${REPO}:redis-${SHA}"     >> "$GITHUB_OUTPUT"
 
+    - name: Setup Node 18
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Build frontend assets
+      run: |
+        npm ci
+        npm run build
+        
     - name: Build & push Redis image
       uses: docker/build-push-action@v5
       with:
