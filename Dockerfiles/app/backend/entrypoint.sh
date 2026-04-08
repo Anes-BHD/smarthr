@@ -10,7 +10,7 @@ APP_NAME=${APP_NAME:-Smarthr}
 APP_ENV=${APP_ENV:-production}
 APP_KEY=${APP_KEY}
 APP_DEBUG=${APP_DEBUG:-false}
-APP_URL=${APP_URL:-http://localhost}
+APP_URL=${APP_URL:-https://smarthr.anesbhd.com}
 
 LOG_CHANNEL=stderr
 LOG_LEVEL=debug
