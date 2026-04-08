@@ -1,12 +1,21 @@
+# Stage 1: Build frontend assets
+FROM node:18-alpine AS frontend
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Stage 2: Nginx with compiled assets
 FROM nginx:alpine
 
 RUN apk add --no-cache curl
 
-# nginx config
+# Nginx config
 COPY Dockerfiles/web/nginx.conf /etc/nginx/conf.d/default.conf
 
-# copy built static assets
-COPY public /var/www/smartrh/public
+# Copy the full public dir including public/build/ from the frontend stage
+COPY --from=frontend /app/public /var/www/smartrh/public
 
 WORKDIR /var/www/smartrh
 
