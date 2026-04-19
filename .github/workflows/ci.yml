@@ -279,7 +279,7 @@ jobs:
       run: |
         aws ecs update-service \
           --cluster smarthr-cluster \
-          --service smarthr-taskdef-cache-service-yhggww4u \
+          --service smarthr-cache-service \
           --force-new-deployment \
           --region us-east-1
 
@@ -287,7 +287,7 @@ jobs:
       run: |
         aws ecs update-service \
           --cluster smarthr-cluster \
-          --service smarthr-taskdef-app-service-414nsswt \
+          --service smarthr-app-service \
           --force-new-deployment \
           --region us-east-1
 
@@ -295,19 +295,19 @@ jobs:
       run: |
         aws ecs wait services-stable \
           --cluster smarthr-cluster \
-          --services smarthr-taskdef-cache-service-yhggww4u \
+          --services smarthr-cache-service \
           --region us-east-1
 
     - name: Wait for app service to stabilize
       run: |
         aws ecs wait services-stable \
           --cluster smarthr-cluster \
-          --services smarthr-taskdef-app-service-414nsswt \
+          --services smarthr-app-service \
           --region us-east-1
 
     - name: Deployment summary
       run: |
-        echo "✅ Deployment completed successfully"
+        echo " Deployment completed successfully"
         echo "Backend image: ${{ needs.build-and-push.outputs.backend_image }}"
         echo "Web image:     ${{ needs.build-and-push.outputs.web_image }}"
         echo "Redis image:   ${{ needs.build-and-push.outputs.redis_image }}"
