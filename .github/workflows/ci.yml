@@ -278,7 +278,7 @@ jobs:
     - name: Deploy cache service
       run: |
         aws ecs update-service \
-          --cluster smarth \
+          --cluster smarthr \
           --service smarthr-cache-service \
           --force-new-deployment \
           --region us-east-1
@@ -286,7 +286,7 @@ jobs:
     - name: Deploy app service (backend + web)
       run: |
         aws ecs update-service \
-          --cluster smarth \
+          --cluster smarthr \
           --service smarthr-app-service \
           --force-new-deployment \
           --region us-east-1
@@ -294,14 +294,14 @@ jobs:
     - name: Wait for cache service to stabilize
       run: |
         aws ecs wait services-stable \
-          --cluster smarth \
+          --cluster smarthr \
           --services smarthr-cache-service \
           --region us-east-1
 
     - name: Wait for app service to stabilize
       run: |
         aws ecs wait services-stable \
-          --cluster smarth \
+          --cluster smarthr \
           --services smarthr-app-service \
           --region us-east-1
 
