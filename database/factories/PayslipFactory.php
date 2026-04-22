@@ -73,8 +73,21 @@ class PayslipFactory extends Factory
             }
             $net_pay = ($base_salary + $allowances) - $deductions;
             if($payslip->type === SalaryType::Hourly){
-                $total_hours = AttendanceTimestamp::where('user_id',$employee->user_id)->whereBetween('created_at',[Carbon::parse($payslip->startDate), Carbon::parse($payslip->endDate)])
-                    ->whereNotNull(['attendance_id','startTime','endTime'])->sum('totalHours');
+                // Calculate total hours from attendance timestamps
+                $attendanceRecords = AttendanceTimestamp::where('user_id',$employee->user_id)
+                    ->whereBetween('created_at',[Carbon::parse($payslip->startDate), Carbon::parse($payslip->endDate)])
+                    ->whereNotNull(['attendance_id','startTime','endTime'])
+                    ->get();
+                
+                // Sum up hours from each record
+                foreach($attendanceRecords as $record) {
+                    if($record->startTime && $record->endTime) {
+                        $start = Carbon::createFromTimeString($record->startTime);
+                        $end = Carbon::createFromTimeString($record->endTime);
+                        $total_hours += $start->diffInHours($end);
+                    }
+                }
+                
                 $hourly_pay = ($total_hours * $base_salary);
                 $net_pay = ($hourly_pay + $allowances) - $deductions;
             }

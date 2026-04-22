@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Accounting\Http\Controllers\Api\BudgetController;
+use Modules\Accounting\Http\Controllers\Api\BudgetCategoryController;
 
 /*
  *--------------------------------------------------------------------------
@@ -14,5 +16,6 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-
+    Route::apiResource('budgets', BudgetController::class)->names('api.budgets');
+    Route::apiResource('budget-categories', BudgetCategoryController::class)->names('api.budget-categories');
 });
