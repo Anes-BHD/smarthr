@@ -81,37 +81,32 @@ class RolesDatabaseSeeder extends Seeder
             }
         }
 
-        Permission::insert($permissionsArray);
-        Role::insert([
-            [
-                'name' => 'Super Admin',
-                'guard_name' => $guard
-            ],
-            [
-                'name' => 'Employee',
-                'guard_name' => $guard
-            ],
-            [
-                'name' => 'Client',
-                'guard_name' => $guard
-            ],
-            [
-                'name' => 'Manager',
-                'guard_name' => $guard
-            ],
-            [
-                'name' => 'Accountant',
-                'guard_name' => $guard
-            ],
-            [
-                'name' => 'HR',
-                'guard_name' => $guard
-            ]
-        ]);
+        foreach ($permissionsArray as $perm) {
+            Permission::firstOrCreate($perm);
+        }
+        
+        $roles = [
+            ['name' => 'Super Admin', 'guard_name' => $guard],
+            ['name' => 'Employee', 'guard_name' => $guard],
+            ['name' => 'Client', 'guard_name' => $guard],
+            ['name' => 'Manager', 'guard_name' => $guard],
+            ['name' => 'Accountant', 'guard_name' => $guard],
+            ['name' => 'HR', 'guard_name' => $guard],
+        ];
+
+        foreach ($roles as $roleData) {
+            Role::firstOrCreate($roleData);
+        }
+
         $super_admin = Role::where('name','Super Admin')->first();
-        $super_admin->givePermissionTo(Permission::all());
+        if ($super_admin) {
+            $super_admin->givePermissionTo(Permission::all());
+        }
+        
         $user = User::find(1);
-        $user->assignRole('Super Admin');
+        if ($user) {
+            $user->assignRole('Super Admin');
+        }
         Model::unguard(false);
 
     }
