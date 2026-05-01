@@ -160,7 +160,6 @@ DB_PASSWORD=
 - Run migrations and seeders
 
 ```
-```
 
 
 (Get-Content "C:\xampp\php83\php.ini") -replace 'memory_limit = 128M', 'memory_limit = 512M' | Set-Content "C:\xampp\php83\php.ini"
