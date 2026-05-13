@@ -164,7 +164,7 @@ jobs:
     outputs:
       backend_image: ${{ steps.meta.outputs.backend_image }}
       web_image: ${{ steps.meta.outputs.web_image }}
-      redis_image: ${{ steps.meta.outputs.redis_image }}
+      agent_image: ${{ steps.meta.outputs.agent_image }}
 
     steps:
     - name: Checkout code
@@ -210,6 +210,7 @@ jobs:
         SHA="${{ github.sha }}"
         echo "backend_image=${REGISTRY}/${REPO}:backend-${SHA}" >> "$GITHUB_OUTPUT"
         echo "web_image=${REGISTRY}/${REPO}:web-${SHA}"         >> "$GITHUB_OUTPUT"
+        echo "agent_image=${REGISTRY}/${REPO}:agent-${SHA}"     >> "$GITHUB_OUTPUT"
 
     - name: Setup Node 18
       uses: actions/setup-node@v3
@@ -249,6 +250,20 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
+    - name: Build & push agent (chatbot) image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfiles/agent/Dockerfile
+        push: true
+        tags: |
+          ${{ steps.meta.outputs.agent_image }}
+          ${{ steps.login-ecr.outputs.registry }}/smarthr:agent-latest
+        cache-from: |
+          type=gha
+          ${{ steps.login-ecr.outputs.registry }}/smarthr:agent-latest
+        cache-to: type=gha,mode=max
+
   deploy:
     runs-on: ubuntu-latest
     needs: build-and-push
@@ -271,6 +286,13 @@ jobs:
           --force-new-deployment \
           --region us-east-1
 
+    - name: Deploy agent (chatbot) service
+      run: |
+        aws ecs update-service \
+          --cluster smarthr \
+          --service smarthr-agent-service \
+          --force-new-deployment \
+          --region us-east-1
 
     - name: Wait for app service to stabilize
       run: |
@@ -279,8 +301,16 @@ jobs:
           --services smarthr-app-service \
           --region us-east-1
 
+    - name: Wait for agent service to stabilize
+      run: |
+        aws ecs wait services-stable \
+          --cluster smarthr \
+          --services smarthr-agent-service \
+          --region us-east-1
+
     - name: Deployment summary
       run: |
-        echo " Deployment completed successfully"
+        echo "✅ Deployment completed successfully"
         echo "Backend image: ${{ needs.build-and-push.outputs.backend_image }}"
         echo "Web image:     ${{ needs.build-and-push.outputs.web_image }}"
+        echo "Agent image:   ${{ needs.build-and-push.outputs.agent_image }}"
