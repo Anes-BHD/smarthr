@@ -27,3 +27,4 @@ yarn-error.log
 /Modules/*/public/hot
 Modules.md
 TODO.md
+/agrntsmarthr/.env
