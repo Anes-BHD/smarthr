@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\TicketController;
+use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\HolidayController;
 use App\Http\Controllers\Api\V1\PayslipController;
 use App\Http\Controllers\Api\V1\EmployeeController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\DepartmentController;
 use App\Http\Controllers\Api\V1\DesignationController;
 use App\Http\Controllers\Api\V1\AttendanceController;
+use App\Http\Controllers\Api\V1\AbsenceController;
 use Modules\Sales\Http\Controllers\Api\InvoiceController;
 use Modules\Sales\Http\Controllers\Api\EstimateController;
 use Modules\Sales\Http\Controllers\Api\TaxController;
@@ -49,9 +51,11 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('designations', DesignationController::class);
         Route::apiResource('users', UserController::class);
         Route::apiResource('attendances', AttendanceController::class)->only(['index', 'show']);
+        Route::get('absences', [AbsenceController::class, 'index']);
         Route::apiResource('payslips', PayslipController::class);
         Route::apiResource('holidays', HolidayController::class);
         Route::apiResource('tickets', TicketController::class);
+        Route::get('projects', [ProjectController::class, 'index']);
         Route::apiResource('assets', AssetController::class);
 
         // Sales Module
