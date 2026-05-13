@@ -54,6 +54,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('profile', [UserProfileController::class, 'update']);
 
     Route::group(['prefix' => 'apps'], function(){
+        Route::view('chatbot', 'pages.chatbot')->name('app.chatbot');
         Route::get('chat/{contact?}', [ChatAppController::class, 'index'])->name('app.chat');
         Route::delete('delete-chat/{receiver}', [ChatAppController::class, 'destroy'])->name('chat.delete-conversation');
     });

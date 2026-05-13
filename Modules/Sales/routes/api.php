@@ -1,7 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Sales\Http\Controllers\SalesController;
+use Modules\Sales\Http\Controllers\Api\TaxController;
+use Modules\Sales\Http\Controllers\Api\ExpenseController;
+use Modules\Sales\Http\Controllers\Api\InvoiceController;
+use Modules\Sales\Http\Controllers\Api\EstimateController;
 
 /*
  *--------------------------------------------------------------------------
@@ -15,5 +18,8 @@ use Modules\Sales\Http\Controllers\SalesController;
 */
 
 Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('sales', SalesController::class)->names('sales');
+    Route::apiResource('invoices', InvoiceController::class)->names('api.invoices');
+    Route::apiResource('expenses', ExpenseController::class)->names('api.expenses');
+    Route::apiResource('estimates', EstimateController::class)->names('api.estimates');
+    Route::apiResource('taxes', TaxController::class)->names('api.taxes');
 });
