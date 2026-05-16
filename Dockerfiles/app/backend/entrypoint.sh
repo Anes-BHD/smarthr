@@ -72,21 +72,24 @@ echo "  Migrations complete."
 # Clear cache to ensure fresh state
 php /var/www/smartrh/artisan optimize:clear
 
-# ── 5. Seed only if the departments table is empty (raw PDO) ──────────────────
+# ── 5. Seed only if the users table is empty (Eloquent check) ──────────────────
 echo "[5/7] Checking if database needs seeding..."
-DATA_EXISTS=$(php -r "
-try {
-    \$pdo = new PDO(
-        'mysql:host=${DB_HOST};port=${DB_PORT:-3306};dbname=${DB_DATABASE}',
-        '${DB_USERNAME}',
-        '${DB_PASSWORD}'
-    );
-    // Check if departments table exists and has data
-    \$res = \$pdo->query('SELECT COUNT(*) FROM departments')->fetchColumn();
-    echo (\$res > 0) ? 'true' : 'false';
-} catch (Exception \$e) {
-    echo 'false';
-}" 2>/dev/null || echo "false")
+    # Check if we have any employees. If not, the database is functionally empty for a demo.
+    DATA_EXISTS=$(php -r "
+        try {
+            include 'vendor/autoload.php';
+            \$app = include 'bootstrap/app.php';
+            \$kernel = \$app->make(Illuminate\Contracts\Console\Kernel::class);
+            \$kernel->bootstrap();
+            if (Illuminate\Support\Facades\Schema::hasTable('users')) {
+                echo Illuminate\Support\Facades\DB::table('users')->where('type', 'Employee')->exists() ? 'true' : 'false';
+            } else {
+                echo 'false';
+            }
+        } catch (\Exception \$e) {
+            echo 'false';
+        }
+    ") 2>/dev/null || echo "false")
 
 if [ "$DATA_EXISTS" = "false" ]; then
     echo "  Database is empty or missing core data — seeding now..."
