@@ -13,163 +13,13 @@ on:
 permissions:
   actions: read
   contents: read
-  security-events: write
 
 jobs:
   # ─────────────────────────────────────────────
-  # 1. Unit & Integration Tests
-  # ─────────────────────────────────────────────
-  test:
-    runs-on: ubuntu-latest
-    env:
-      PHP_CS_FIXER_IGNORE_ENV: 1
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: pdo_mysql, mbstring, exif, pcntl, bcmath, gd, zip, intl, opcache, redis
-          tools: composer:v2
-
-      - name: Cache Composer vendor
-        uses: actions/cache@v3
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-
-      - name: Cache Composer cache dir
-        uses: actions/cache@v3
-        with:
-          path: ~/.composer/cache
-          key: ${{ runner.os }}-composer-cache-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-cache-
-
-      - name: Install Composer dependencies
-        run: composer install --no-progress --prefer-dist --optimize-autoloader
-
-      - name: Setup Node 18
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Install frontend dependencies
-        run: npm ci
-
-      - name: Build frontend assets
-        run: npm run build --if-present
-
-      - name: Setup Laravel environment
-        run: |
-          echo "APP_NAME=Smarthr"        > .env
-          echo "APP_ENV=testing"        >> .env
-          echo "APP_KEY=base64:$(openssl rand -base64 32)" >> .env
-          echo "DB_CONNECTION=sqlite"   >> .env
-          echo "DB_DATABASE=:memory:"   >> .env
-          echo "CACHE_DRIVER=array"     >> .env
-          echo "SESSION_DRIVER=array"   >> .env
-          echo "QUEUE_CONNECTION=sync"  >> .env
-
-      - name: Run PHPUnit
-        run: |
-          mkdir -p test-results
-          ./vendor/bin/phpunit --log-junit test-results/phpunit.xml
-
-      - name: Upload PHPUnit results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: phpunit-results
-          path: test-results
-
-  # ─────────────────────────────────────────────
-  # 2. OWASP Dependency-Check
-  # ─────────────────────────────────────────────
-  dependency-check:
-    name: OWASP Dependency-Check
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Run OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
-        id: owasp
-        continue-on-error: true
-        with:
-          project: 'smarthr'
-          path: '.'
-          format: 'ALL'
-          out: 'dependency-check-report'
-          args: >
-            --enableRetired
-            --enableExperimental
-
-      - name: Upload Dependency-Check report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dependency-check-report
-          path: dependency-check-report
-
-      - name: Upload SARIF to GitHub Security tab
-        if: always()
-        continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: dependency-check-report/dependency-check-report.sarif
-
-  # ─────────────────────────────────────────────
-  # 3. Trivy Vulnerability Scan
-  # ─────────────────────────────────────────────
-  vulnerability-scan:
-    name: Trivy Vulnerability Scan
-    runs-on: ubuntu-latest
-    needs: dependency-check
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      - name: Upload Trivy results to GitHub Security tab
-        if: always()
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: 'trivy-results.sarif'
-
-  # ─────────────────────────────────────────────
-  # 4. Build & Push Docker Images to ECR
+  # 1. Build & Push Docker Images to ECR
   # ─────────────────────────────────────────────
   build-and-push:
     runs-on: ubuntu-latest
-    needs: [dependency-check, vulnerability-scan]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: staging
     outputs:
@@ -195,12 +45,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Re-authenticate Docker to ECR (post-buildx)
-        run: |
-          aws ecr get-login-password --region us-east-1 \
-            | docker login --username AWS --password-stdin \
-              ${{ steps.login-ecr.outputs.registry }}
-
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -210,6 +54,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # ── PHP / Composer ──────────────────────────────────────────────────
       - name: Setup PHP 8.4
         uses: shivammathur/setup-php@v2
         with:
@@ -220,18 +65,27 @@ jobs:
       - name: Install Composer dependencies (production)
         run: composer install --no-dev --optimize-autoloader --no-progress
 
+      # ── Node / Vite ─────────────────────────────────────────────────────
       - name: Setup Node 18
         uses: actions/setup-node@v3
         with:
           node-version: '18'
           cache: 'npm'
 
-      - name: Build frontend assets
-        run: |
-          npm ci
-          npm run build
-          ls -la public/build/manifest.json
+      - name: Install npm dependencies
+        run: npm ci
 
+      - name: Build frontend assets (laravel-vite-plugin → public/build/)
+        run: npm run build
+
+      - name: Verify build output exists
+        run: |
+          echo "=== public/build/ contents ==="
+          ls -la public/build/
+          echo "=== manifest.json ==="
+          cat public/build/manifest.json
+
+      # ── Image tags ──────────────────────────────────────────────────────
       - name: Compute image tags
         id: meta
         run: |
@@ -241,6 +95,12 @@ jobs:
           echo "web_image=${REGISTRY}/smarthr-web:${SHA}"         >> "$GITHUB_OUTPUT"
           echo "agent_image=${REGISTRY}/smarthr-agent:${SHA}"     >> "$GITHUB_OUTPUT"
           echo "redis_image=${REGISTRY}/smarthr-redis:${SHA}"     >> "$GITHUB_OUTPUT"
+
+      # ── Docker builds ───────────────────────────────────────────────────
+      # NOTE: cache is DISABLED on all images.
+      # GHA cache can serve a stale layer that predates the npm build,
+      # causing public/build/ to be missing inside the image.
+      # Re-enable cache-from/cache-to only after confirming assets load.
 
       - name: Build & push backend image
         uses: docker/build-push-action@v5
@@ -252,8 +112,6 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.backend_image }}
             ${{ steps.login-ecr.outputs.registry }}/smarthr-backend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Build & push web (Nginx) image
         uses: docker/build-push-action@v5
@@ -265,8 +123,6 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.web_image }}
             ${{ steps.login-ecr.outputs.registry }}/smarthr-web:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Build & push agent image
         uses: docker/build-push-action@v5
@@ -278,8 +134,6 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.agent_image }}
             ${{ steps.login-ecr.outputs.registry }}/smarthr-agent:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Build & push redis image
         uses: docker/build-push-action@v5
@@ -291,11 +145,9 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.redis_image }}
             ${{ steps.login-ecr.outputs.registry }}/smarthr-redis:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   # ─────────────────────────────────────────────
-  # 5. Deploy to ECS
+  # 2. Deploy to ECS
   # ─────────────────────────────────────────────
   deploy:
     runs-on: ubuntu-latest

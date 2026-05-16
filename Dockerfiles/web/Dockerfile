@@ -4,11 +4,15 @@ RUN apk add --no-cache curl
 
 COPY Dockerfiles/web/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Laravel public assets
+# Built by CI runner (npm run build) before this docker build runs.
+# laravel-vite-plugin outputs to public/build/ — NOT frontend/dist/
 COPY public /var/www/smartrh/public
 
-# React SPA built assets — adjust source path to match your actual build output
-COPY frontend/dist /var/www/smartrh/frontend
+# Hard fail if manifest is missing — catches silent build failures
+RUN test -f /var/www/smartrh/public/build/manifest.json \
+    || (echo "❌ ERROR: public/build/manifest.json is missing!" \
+        && echo "   Make sure 'npm run build' ran before 'docker build'" \
+        && exit 1)
 
 WORKDIR /var/www/smartrh
 
