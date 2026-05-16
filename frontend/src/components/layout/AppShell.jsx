@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Avatar } from '../ui/index'
+import {
   LayoutDashboard, Users, CreditCard, Ticket, UserCog, Building2,
   Briefcase, FileText, User, CalendarDays, LogOut, ChevronRight,
   UserCheck, Receipt, Calculator, MessageSquare,
