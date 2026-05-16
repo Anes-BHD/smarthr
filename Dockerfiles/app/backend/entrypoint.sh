@@ -75,6 +75,8 @@ php /var/www/smartrh/artisan optimize:clear
 # ── 5. Seed only if the users table is empty (Eloquent check) ──────────────────
 echo "[5/7] Checking if database needs seeding..."
     # Check if we have any employees. If not, the database is functionally empty for a demo.
+    # Check if we have more than 3 users. (Base system has 3: Admin, Client, 1 Employee).
+    # If we have 3 or less, the full demo data (15+ users) is missing.
     DATA_EXISTS=$(php -r "
         try {
             include 'vendor/autoload.php';
@@ -82,7 +84,7 @@ echo "[5/7] Checking if database needs seeding..."
             \$kernel = \$app->make(Illuminate\Contracts\Console\Kernel::class);
             \$kernel->bootstrap();
             if (Illuminate\Support\Facades\Schema::hasTable('users')) {
-                echo Illuminate\Support\Facades\DB::table('users')->where('type', 'Employee')->exists() ? 'true' : 'false';
+                echo Illuminate\Support\Facades\DB::table('users')->count() > 3 ? 'true' : 'false';
             } else {
                 echo 'false';
             }
