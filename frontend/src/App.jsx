@@ -86,6 +86,7 @@ export default function App() {
               <AppShell>
                 <Routes>
                   <Route path="/" element={<EmployeeDashboard />} />
+                  <Route path="/chatbot" element={<AdminChatbot />} />
                   <Route path="/profile" element={<EmployeeProfile />} />
                   <Route path="/leaves" element={<EmployeeLeaves />} />
                   <Route path="/payslips" element={<EmployeePayslips />} />
@@ -101,6 +102,7 @@ export default function App() {
               <AppShell>
                 <Routes>
                   <Route path="/" element={<ClientDashboard />} />
+                  <Route path="/chatbot" element={<AdminChatbot />} />
                   <Route path="/projects" element={<ClientProjects />} />
                   <Route path="/invoices" element={<ClientInvoices />} />
                   <Route path="/tickets" element={<ClientTickets />} />

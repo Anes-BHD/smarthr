@@ -41,6 +41,7 @@ const navConfig = {
   employee: [
     { label: 'My Space', items: [
       { to: '/employee',          icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/employee/chatbot',  icon: MessageSquare,   label: 'AI Assistant' },
       { to: '/employee/profile',  icon: User,            label: 'My Profile' },
       { to: '/employee/leaves',   icon: CalendarDays,    label: 'Leaves' },
       { to: '/employee/payslips', icon: CreditCard,      label: 'Payslips' },
@@ -50,6 +51,7 @@ const navConfig = {
   client: [
     { label: 'Client Portal', items: [
       { to: '/client',           icon: Building2,  label: 'Overview' },
+      { to: '/client/chatbot',   icon: MessageSquare, label: 'AI Assistant' },
       { to: '/client/projects',  icon: Briefcase,  label: 'Projects' },
       { to: '/client/invoices',  icon: FileText,   label: 'Invoices' },
       { to: '/client/tickets',   icon: Ticket,     label: 'Tickets' },

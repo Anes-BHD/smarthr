@@ -59,7 +59,12 @@ echo "  Database is ready!"
 # ── 4. Run migrations ─────────────────────────────────────────────────────────
 echo "[4/7] Running migrations..."
 php /var/www/smartrh/artisan migrate --force --no-interaction
+php /var/www/smartrh/artisan module:migrate --force --no-interaction
 echo "  Migrations complete."
+
+# Clear cache to ensure fresh state
+php /var/www/smartrh/artisan optimize:clear
+
 
 # ── 5. Seed only if the users table is empty (raw PDO — no Laravel bootstrap) ──
 echo "[5/7] Checking if seeding is needed..."
@@ -78,10 +83,15 @@ try {
 if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
     echo "  No users found — seeding database..."
     php /var/www/smartrh/artisan db:seed --force --no-interaction
-    echo "  Seeding complete."
+    echo "  Seeding core data complete."
+    
+    echo "  Seeding module data..."
+    php /var/www/smartrh/artisan module:seed --force --no-interaction
+    echo "  Seeding module data complete."
 else
     echo "  Users already exist (${USER_COUNT} found) — skipping seed."
 fi
+
 
 # ── 6. Create storage symlink (public/storage → storage/app/public) ───────────
 echo "[6/7] Creating storage symlink..."
