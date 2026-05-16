@@ -58,6 +58,13 @@ echo "  Database is ready!"
 
 # ── 4. Run migrations ─────────────────────────────────────────────────────────
 echo "[4/7] Running migrations..."
+
+# Optional: Wipe database if DB_WIPE=true is set in ECS environment
+if [ "${DB_WIPE}" = "true" ]; then
+    echo "  DB_WIPE is true — wiping database..."
+    php /var/www/smartrh/artisan db:wipe --force --no-interaction
+fi
+
 php /var/www/smartrh/artisan migrate --force --no-interaction
 php /var/www/smartrh/artisan module:migrate --force --no-interaction
 echo "  Migrations complete."
@@ -65,32 +72,31 @@ echo "  Migrations complete."
 # Clear cache to ensure fresh state
 php /var/www/smartrh/artisan optimize:clear
 
-
-# ── 5. Seed only if the users table is empty (raw PDO — no Laravel bootstrap) ──
-echo "[5/7] Checking if seeding is needed..."
-USER_COUNT=$(php -r "
+# ── 5. Seed only if the departments table is empty (raw PDO) ──────────────────
+echo "[5/7] Checking if database needs seeding..."
+DATA_EXISTS=$(php -r "
 try {
     \$pdo = new PDO(
         'mysql:host=${DB_HOST};port=${DB_PORT:-3306};dbname=${DB_DATABASE}',
         '${DB_USERNAME}',
         '${DB_PASSWORD}'
     );
-    echo \$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
+    // Check if departments table exists and has data
+    \$res = \$pdo->query('SELECT COUNT(*) FROM departments')->fetchColumn();
+    echo (\$res > 0) ? 'true' : 'false';
 } catch (Exception \$e) {
-    echo '0';
-}" 2>/dev/null || echo "0")
+    echo 'false';
+}" 2>/dev/null || echo "false")
 
-if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
-    echo "  No users found — seeding database..."
+if [ "$DATA_EXISTS" = "false" ]; then
+    echo "  Database is empty or missing core data — seeding now..."
     php /var/www/smartrh/artisan db:seed --force --no-interaction
-    echo "  Seeding core data complete."
-    
-    echo "  Seeding module data..."
     php /var/www/smartrh/artisan module:seed --force --no-interaction
-    echo "  Seeding module data complete."
+    echo "  Seeding complete."
 else
-    echo "  Users already exist (${USER_COUNT} found) — skipping seed."
+    echo "  Data already exists — skipping seed."
 fi
+
 
 
 # ── 6. Create storage symlink (public/storage → storage/app/public) ───────────

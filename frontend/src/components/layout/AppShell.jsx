@@ -63,8 +63,8 @@ const navConfig = {
 export default function AppShell({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const role = user?.type?.toLowerCase() ?? user?.roles?.[0]?.toLowerCase() ?? 'employee'
-  const sections = navConfig[role] ?? navConfig.employee
+  const role = (user?.type ?? user?.roles?.[0] ?? 'employee').toLowerCase().replace(/\s+/g, '')
+  const sections = navConfig[role] || navConfig.employee
 
   const handleLogout = async () => {
     await logout()

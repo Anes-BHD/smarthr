@@ -29,6 +29,10 @@ def root():
 def health():
     return {"status": "healthy"}
 
+@app.get("/login")
+def health_compat():
+    return {"status": "ok"}
+
 EMPLOYEE_ACTIONS = {
     "get_employee_info",
     "get_employee_full_info",

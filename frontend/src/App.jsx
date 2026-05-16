@@ -39,7 +39,7 @@ function RequireAuth({ children, allowedRoles }) {
   if (loading) return <Spinner />
   if (!token || !user) return <Navigate to="/login" state={{ from: location }} replace />
 
-  const role = (user.type ?? user.roles?.[0] ?? 'employee').toLowerCase()
+  const role = (user.type ?? user.roles?.[0] ?? 'employee').toLowerCase().replace(/\s+/g, '')
   const isSuperadmin = role === 'superadmin'
 
   if (!isSuperadmin && allowedRoles && !allowedRoles.includes(role)) {

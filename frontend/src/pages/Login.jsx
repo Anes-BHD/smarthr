@@ -14,7 +14,7 @@ export default function Login() {
   const [loading, setLoading]   = useState(false)
 
   const roleRedirect = user => {
-    const r = (user?.type ?? user?.roles?.[0] ?? '').toLowerCase()
+    const r = (user?.type ?? user?.roles?.[0] ?? '').toLowerCase().replace(/\s+/g, '')
     if (r === 'superadmin' || r === 'admin') return '/admin'
     if (r === 'client') return '/client'
     return '/employee'
