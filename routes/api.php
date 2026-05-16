@@ -45,27 +45,27 @@ Route::prefix('v1')->group(function () {
         Route::get('auth/me', [AuthController::class, 'me']);
 
         // Core HR entities
-        Route::apiResource('employees', EmployeeController::class);
-        Route::apiResource('clients', ClientController::class);
-        Route::apiResource('departments', DepartmentController::class);
-        Route::apiResource('designations', DesignationController::class);
-        Route::apiResource('users', UserController::class);
-        Route::apiResource('attendances', AttendanceController::class)->only(['index', 'show']);
+        Route::apiResource('employees', EmployeeController::class)->names('api.employees');
+        Route::apiResource('clients', ClientController::class)->names('api.clients');
+        Route::apiResource('departments', DepartmentController::class)->names('api.departments');
+        Route::apiResource('designations', DesignationController::class)->names('api.designations');
+        Route::apiResource('users', UserController::class)->names('api.users');
+        Route::apiResource('attendances', AttendanceController::class)->only(['index', 'show'])->names('api.attendances');
         Route::get('absences', [AbsenceController::class, 'index']);
-        Route::apiResource('payslips', PayslipController::class);
-        Route::apiResource('holidays', HolidayController::class);
-        Route::apiResource('tickets', TicketController::class);
+        Route::apiResource('payslips', PayslipController::class)->names('api.payslips');
+        Route::apiResource('holidays', HolidayController::class)->names('api.holidays');
+        Route::apiResource('tickets', TicketController::class)->names('api.tickets');
         Route::get('projects', [ProjectController::class, 'index']);
-        Route::apiResource('assets', AssetController::class);
+        Route::apiResource('assets', AssetController::class)->names('api.assets');
 
         // Sales Module
-        Route::apiResource('invoices', InvoiceController::class);
-        Route::apiResource('estimates', EstimateController::class);
-        Route::apiResource('taxes', TaxController::class);
-        Route::apiResource('expenses', ExpenseController::class);
+        Route::apiResource('invoices', InvoiceController::class)->names('api.invoices');
+        Route::apiResource('estimates', EstimateController::class)->names('api.estimates');
+        Route::apiResource('taxes', TaxController::class)->names('api.taxes');
+        Route::apiResource('expenses', ExpenseController::class)->names('api.expenses');
 
         // Accounting Module
-        Route::apiResource('budgets', BudgetController::class);
-        Route::apiResource('budget-categories', BudgetCategoryController::class);
+        Route::apiResource('budgets', BudgetController::class)->names('api.budgets');
+        Route::apiResource('budget-categories', BudgetCategoryController::class)->names('api.budget-categories');
     });
 });
