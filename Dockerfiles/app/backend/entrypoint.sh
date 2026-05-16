@@ -1,10 +1,15 @@
 #!/bin/bash
 set -e
 
-echo "Setting permissions..."
+echo "=== SmartHR Backend Entrypoint ==="
+
+# ── 1. Permissions ────────────────────────────────────────────────────────────
+echo "[1/7] Setting permissions..."
 chmod -R 775 /var/www/smartrh/storage /var/www/smartrh/bootstrap/cache
 chown -R www-data:www-data /var/www/smartrh/storage /var/www/smartrh/bootstrap/cache
 
+# ── 2. Write .env from container environment variables ────────────────────────
+echo "[2/7] Writing .env..."
 cat > /var/www/smartrh/.env <<EOF
 APP_NAME=${APP_NAME:-Smarthr}
 APP_ENV=${APP_ENV:-production}
@@ -37,32 +42,56 @@ QUEUE_CONNECTION=database
 FILESYSTEM_DISK=local
 EOF
 
-echo "Waiting for database..."
+# ── 3. Wait for MySQL to be ready (TCP check) ─────────────────────────────────
+echo "[3/7] Waiting for database at ${DB_HOST}:3306..."
+RETRIES=30
 until (echo > /dev/tcp/${DB_HOST}/3306) 2>/dev/null; do
-    echo "DB not ready, retrying in 3s..."
+    RETRIES=$((RETRIES - 1))
+    if [ "$RETRIES" -le 0 ]; then
+        echo "ERROR: Database never became ready. Aborting."
+        exit 1
+    fi
+    echo "  DB not ready, retrying in 3s... (${RETRIES} attempts left)"
     sleep 3
 done
-echo "Database is ready!"
+echo "  Database is ready!"
 
+# ── 4. Run migrations ─────────────────────────────────────────────────────────
+echo "[4/7] Running migrations..."
+php /var/www/smartrh/artisan migrate --force --no-interaction
+echo "  Migrations complete."
 
-echo "Running migrations..."
-if ! php /var/www/smartrh/artisan migrate --force --no-interaction; then
-    echo "WARNING: migrate exited with an error, continuing startup..."
-fi
-echo "Checking if seeding needed..."
-USER_COUNT=$(php /var/www/smartrh/artisan tinker \
-    --execute="echo \App\Models\User::count();" 2>/dev/null | tail -1 | tr -d '[:space:]')
+# ── 5. Seed only if the users table is empty (raw PDO — no Laravel bootstrap) ──
+echo "[5/7] Checking if seeding is needed..."
+USER_COUNT=$(php -r "
+try {
+    \$pdo = new PDO(
+        'mysql:host=${DB_HOST};port=${DB_PORT:-3306};dbname=${DB_DATABASE}',
+        '${DB_USERNAME}',
+        '${DB_PASSWORD}'
+    );
+    echo \$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
+} catch (Exception \$e) {
+    echo '0';
+}" 2>/dev/null || echo "0")
+
 if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
-    echo "Seeding database..."
+    echo "  No users found — seeding database..."
     php /var/www/smartrh/artisan db:seed --force --no-interaction
+    echo "  Seeding complete."
 else
-    echo "Users already exist, skipping seeding."
+    echo "  Users already exist (${USER_COUNT} found) — skipping seed."
 fi
 
+# ── 6. Create storage symlink (public/storage → storage/app/public) ───────────
+echo "[6/7] Creating storage symlink..."
+php /var/www/smartrh/artisan storage:link --force || true
 
-echo "Caching config..."
+# ── 7. Cache config & routes for production performance ──────────────────────
+echo "[7/7] Caching config and routes..."
 php /var/www/smartrh/artisan config:cache
 php /var/www/smartrh/artisan route:cache
+php /var/www/smartrh/artisan view:cache
 
-echo "Starting PHP-FPM..."
+echo "=== Starting PHP-FPM ==="
 exec php-fpm
