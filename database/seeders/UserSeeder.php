@@ -19,7 +19,7 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        User::insert([
+        $users = [
             [
                 'firstname' => 'Mushe',
                 'lastname' => 'Abdul-Hakim',
@@ -28,7 +28,6 @@ class UserSeeder extends Seeder
                 'email_verified_at' => now(),
                 'type' => UserType::SUPERADMIN,
                 'is_active' => 1,
-                'created_at' => now(),
             ],
             [
                 'firstname' => 'John',
@@ -38,19 +37,23 @@ class UserSeeder extends Seeder
                 'email_verified_at' => now(),
                 'type' => UserType::CLIENT,
                 'is_active' => 1,
-                'created_at' => now(),
             ],
-        ]);
-        $employee = User::create([
-            'firstname' => 'Smart',
-            'lastname' => 'Employee',
-            'email' => 'employee@smarthr.com',
-            'password' => Hash::make('password'),
-            'email_verified_at' => now(),
-            'type' => UserType::EMPLOYEE,
-            'is_active' => 1,
-            'created_at' => now(),
-        ]);
+        ];
+
+        foreach ($users as $userData) {
+            User::updateOrCreate(['email' => $userData['email']], $userData);
+        }
+        $employee = User::updateOrCreate(
+            ['email' => 'employee@smarthr.com'],
+            [
+                'firstname' => 'Smart',
+                'lastname' => 'Employee',
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+                'type' => UserType::EMPLOYEE,
+                'is_active' => 1,
+            ]
+        );
         EmployeeDetail::create([
             'emp_id' => 'EMP-0001',
             'user_id' => $employee->id,
