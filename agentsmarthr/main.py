@@ -19,6 +19,9 @@ from tools.projects.handler import PROJECT_ACTIONS, execute_project_tool
 
 
 app = FastAPI()
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 EMPLOYEE_ACTIONS = {
     "get_employee_info",
