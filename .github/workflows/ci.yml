@@ -66,24 +66,9 @@ jobs:
         run: composer install --no-dev --optimize-autoloader --no-progress
 
       # ── Node / Vite ─────────────────────────────────────────────────────
-      - name: Setup Node 18
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Install npm dependencies
-        run: npm ci
-
-      - name: Build frontend assets (laravel-vite-plugin → public/build/)
-        run: npm run build
-
-      - name: Verify build output exists
-        run: |
-          echo "=== public/build/ contents ==="
-          ls -la public/build/
-          echo "=== manifest.json ==="
-          cat public/build/manifest.json
+      # NOTE: The React SPA (frontend/) is built INSIDE the web Dockerfile
+      # via a multi-stage build (Node → Nginx). No npm step needed here.
+      # The backend image only needs composer vendor/, handled above.
 
       # ── Image tags ──────────────────────────────────────────────────────
       - name: Compute image tags

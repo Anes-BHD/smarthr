@@ -1,26 +1,37 @@
+# ── Stage 1: Build the React SPA ─────────────────────────────────────────────
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /build
+
+# Install deps separately for better layer caching
+COPY frontend/package*.json ./
+RUN npm ci
+
+# Copy source and build
+COPY frontend/ ./
+RUN npm run build
+# Output → /build/dist/
+
+# ── Stage 2: Nginx web server ─────────────────────────────────────────────────
 FROM nginx:alpine
 
 RUN apk add --no-cache curl
 
 COPY Dockerfiles/web/nginx.conf /etc/nginx/conf.d/default.conf
 
-# ── Static files served directly by Nginx ──────────────────────────────────
-# Built by CI runner (npm run build) before this docker build runs.
-# laravel-vite-plugin outputs to public/build/
+# React SPA built output — served at /
+COPY --from=frontend-builder /build/dist /var/www/smartrh/frontend/dist
+
+# Laravel public folder — used only for API PHP routing and static assets
 COPY public /var/www/smartrh/public
 
-# Hard fail if manifest is missing — catches silent build failures
-RUN test -f /var/www/smartrh/public/build/manifest.json \
-    || (echo "❌ ERROR: public/build/manifest.json is missing!" \
-        && echo "   Make sure 'npm run build' ran before 'docker build'" \
-        && exit 1)
-
-# Create the storage directory that storage:link will point to
-# NOTE: In production, mount an EFS volume to /var/www/smartrh/storage/app/public
-# so that both backend and web containers share uploaded files.
+# Create storage directory and symlink for Laravel uploaded files
 RUN mkdir -p /var/www/smartrh/storage/app/public \
-    && mkdir -p /var/www/smartrh/public/storage \
     && ln -sfn /var/www/smartrh/storage/app/public /var/www/smartrh/public/storage
+
+# Hard fail if React SPA index.html is missing
+RUN test -f /var/www/smartrh/frontend/dist/index.html \
+    || (echo "❌ ERROR: frontend/dist/index.html is missing!" && exit 1)
 
 WORKDIR /var/www/smartrh
 
