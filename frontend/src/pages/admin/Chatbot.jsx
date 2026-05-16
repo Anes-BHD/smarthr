@@ -16,23 +16,46 @@ export default function Chatbot() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e?.preventDefault()
-    if (!input.trim()) return
+    if (!input.trim() || isTyping) return
 
-    const newMsg = { id: Date.now(), role: 'user', text: input.trim() }
+    const userMessage = input.trim()
+    const newMsg = { id: Date.now(), role: 'user', text: userMessage }
+    
     setMessages(prev => [...prev, newMsg])
     setInput('')
     setIsTyping(true)
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const response = await fetch('/chatbot/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('shr_token')}`
+        },
+        body: JSON.stringify({
+          session_id: `session_${user?.id || 'guest'}`,
+          message: userMessage
+        })
+      })
+
+      if (!response.ok) throw new Error('Agent unreachable')
+
+      const data = await response.json()
+      
       setMessages(prev => [
         ...prev, 
-        { id: Date.now(), role: 'assistant', text: "I'm a mockup chatbot! Once you integrate a real backend AI service like OpenAI, I will be able to answer your questions and perform tasks on the SmartHR platform for you." }
+        { id: Date.now(), role: 'assistant', text: data.response || data.message || "I'm sorry, I couldn't process that." }
       ])
+    } catch (err) {
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now(), role: 'assistant', text: "Error: I'm having trouble connecting to my brain. Please try again later." }
+      ])
+    } finally {
       setIsTyping(false)
-    }, 1500)
+    }
   }
 
   const displayName = `${user?.firstname ?? user?.name ?? ''} ${user?.lastname ?? ''}`.trim() || 'You'
