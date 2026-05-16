@@ -89,7 +89,7 @@ echo "[5/7] Checking if database needs seeding..."
         } catch (\Exception \$e) {
             echo 'false';
         }
-    ") 2>/dev/null || echo "false")
+    " 2>/dev/null || echo "false")
 
 if [ "$DATA_EXISTS" = "false" ]; then
     echo "  Database is empty or missing core data — seeding now..."
