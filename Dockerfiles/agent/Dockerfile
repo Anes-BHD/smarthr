@@ -13,7 +13,8 @@ RUN pip install --upgrade pip \
 FROM python:3.12-slim
 
 # Non-root user for security
-RUN useradd -m -u 1001 agent
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/* \
+    && useradd -m -u 1001 agent
 
 WORKDIR /app
 

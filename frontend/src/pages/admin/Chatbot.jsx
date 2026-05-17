@@ -40,7 +40,10 @@ export default function Chatbot() {
         })
       })
 
-      if (!response.ok) throw new Error('Agent unreachable')
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || `Agent unreachable (${response.status})`);
+      }
 
       const data = await response.json()
       
@@ -51,7 +54,7 @@ export default function Chatbot() {
     } catch (err) {
       setMessages(prev => [
         ...prev,
-        { id: Date.now(), role: 'assistant', text: "Error: I'm having trouble connecting to my brain. Please try again later." }
+        { id: Date.now(), role: 'assistant', text: `Error: ${err.message}` }
       ])
     } finally {
       setIsTyping(false)
