@@ -10,3 +10,6 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
 ENABLE_LLM_ROUTER = os.getenv("ENABLE_LLM_ROUTER", "true").lower() == "true"
 SMARTHR_AGENT_TOKEN = os.getenv("SMARTHR_AGENT_TOKEN", "super-secret-token")
+REDIS_HOST = os.getenv("REDIS_HOST", "smarthr-redis")
+REDIS_PORT = os.getenv("REDIS_PORT", "6379")
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")

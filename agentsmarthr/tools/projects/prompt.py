@@ -53,6 +53,8 @@ Routing rules:
   - "employés absents" is absence.
   - "designation de Ahmed" is employees.
   - "ticket high" is tickets.
+  - "ajouter employé", "ajoute employé", "créer employé", "creer employe", "modifier employé", "supprimer employé" → employees tool, NOT unsupported_action.
+  - Any request about adding, creating, updating, or deleting an employee → employees tool.
 - Return JSON only. No markdown. No natural language.
 
 Examples:

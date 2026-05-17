@@ -135,6 +135,17 @@ JSON:
   "reason": "full employee info requested"
 }
 
+User: ajouter employés
+JSON:
+{
+  "handled": true,
+  "tool_name": "employees",
+  "action_name": "create_employee",
+  "arguments": {},
+  "confidence": 0.8,
+  "reason": "employee creation intent without details yet"
+}
+
 User: ajoute employe Ahmed Ben Ali email ahmed@test.com tel 12345678 department IT designation Developer
 JSON:
 {

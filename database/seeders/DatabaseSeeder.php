@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             // WorldSeeder::class,
             ApiTestSeeder::class,
+            SmartHRDemoSeeder::class,
         ]);
     }
 }

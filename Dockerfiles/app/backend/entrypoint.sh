@@ -99,7 +99,9 @@ if [ "$DATA_EXISTS" = "false" ]; then
     php /var/www/smartrh/artisan module:seed --force --no-interaction
     echo "  Seeding complete."
 else
-    echo "  Data already exists — skipping seed."
+    echo "  Data already exists — running idempotent demo seeder..."
+    php /var/www/smartrh/artisan db:seed --class=SmartHRDemoSeeder --force --no-interaction
+    echo "  Demo seeder complete."
 fi
 
 
