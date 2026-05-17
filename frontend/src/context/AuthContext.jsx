@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!token) { setLoading(false); return }
     authApi.me()
-      .then(r => setUser(r.data))
+      .then(r => setUser(r.data.user ?? r.data))
       .catch(() => { logout() })
       .finally(() => setLoading(false))
   }, []) // eslint-disable-line

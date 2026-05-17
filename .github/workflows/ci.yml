@@ -156,13 +156,13 @@ jobs:
             --force-new-deployment \
             --region us-east-1
 
-      - name: Deploy agent service
-        run: |
-          aws ecs update-service \
-            --cluster smarthr \
-            --service smarthr-agent-service \
-            --force-new-deployment \
-            --region us-east-1
+#      - name: Deploy agent service
+#        run: |
+#          aws ecs update-service \
+#            --cluster smarthr \
+#            --service smarthr-agent-service \
+#            --force-new-deployment \
+#            --region us-east-1
             
 #      - name: Deploy cache service
 #       run: |
@@ -188,12 +188,12 @@ jobs:
             --services smarthr-app-service \
             --region us-east-1
 
-      - name: Wait for agent service to stabilize
-        run: |
-          aws ecs wait services-stable \
-            --cluster smarthr \
-            --services smarthr-agent-service \
-            --region us-east-1
+ #     - name: Wait for agent service to stabilize
+ #       run: |
+ #         aws ecs wait services-stable \
+ #           --cluster smarthr \
+ #           --services smarthr-agent-service \
+ #           --region us-east-1
 
           
 
