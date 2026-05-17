@@ -94,8 +94,27 @@ def _normalize_plan(plan: dict) -> dict:
     intent = plan.get("intent")
     if intent and not plan.get("action_name"):
         plan["action_name"] = intent
-    if plan.get("tool_name") == "project":
+        
+    tool_name = str(plan.get("tool_name") or "").lower()
+    if tool_name in ("project", "projects"):
         plan["tool_name"] = "projects"
+    elif tool_name in ("employee", "employees"):
+        plan["tool_name"] = "employees"
+    elif tool_name in ("absence", "absences"):
+        plan["tool_name"] = "absence"
+    elif tool_name in ("ticket", "tickets"):
+        plan["tool_name"] = "ticket"
+
+    action_name = str(plan.get("action_name") or "").lower()
+    if action_name == "add_employee":
+        plan["action_name"] = "create_employee"
+    elif action_name == "edit_employee":
+        plan["action_name"] = "update_employee"
+    elif action_name == "remove_employee":
+        plan["action_name"] = "delete_employee"
+    elif action_name in ("list_clients", "get_clients"):
+        plan["action_name"] = "projects_by_client"
+
     if plan.get("action_name") in EMPLOYEE_ACTIONS and not plan.get("tool_name"):
         plan["tool_name"] = "employees"
     if plan.get("action_name") in ABSENCE_ACTIONS and not plan.get("tool_name"):
@@ -311,6 +330,8 @@ async def chat(req: ChatRequest, _: None = Depends(verify_admin_guard)):
 
         if plan.get("error"):
             final_message = plan.get("error") or OPENROUTER_ERROR_MESSAGE
+        elif plan.get("action_name") == "unsupported_action":
+            final_message = "Je suis votre assistant SmartHR. Comment puis-je vous aider avec les employés, absences, tickets ou projets ?"
         elif plan.get("tool_name") == "projects":
             final_message = execute_project_tool(plan)
         elif plan.get("action_name") not in ALL_ACTIONS or plan.get("tool_name") not in {"employees", "absence", "ticket"}:
