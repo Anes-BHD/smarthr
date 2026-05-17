@@ -2,8 +2,11 @@ from typing import Any, Dict, Optional
 from urllib.parse import urljoin
 
 import httpx
+from contextvars import ContextVar
 
 from config import SMARTHR_BACKEND_TOKEN, SMARTHR_BACKEND_URL
+
+request_token: ContextVar[str] = ContextVar("request_token", default="")
 
 
 class SmartHRApiError(Exception):
@@ -31,8 +34,9 @@ class PhpApiClient:
         self.timeout = timeout
 
     def _headers(self) -> Dict[str, str]:
+        token = request_token.get() or f"Bearer {self.token}"
         return {
-            "Authorization": f"Bearer {self.token}",
+            "Authorization": token,
             "Accept": "application/json",
             "Content-Type": "application/json",
         }

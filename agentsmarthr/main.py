@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -9,6 +9,7 @@ AGENT_ROOT = Path(__file__).resolve().parent
 if str(AGENT_ROOT) not in sys.path:
     sys.path.insert(0, str(AGENT_ROOT))
 
+from clients.php_api_client import request_token
 from graphs.admin.mcp.micro_planner import OPENROUTER_ERROR_MESSAGE, plan_employee_request
 from graphs.admin.tools.absence.executor import ABSENCE_ACTIONS, execute_absence_tool
 from graphs.admin.tools.employees.executor import execute_employee_tool
@@ -230,7 +231,11 @@ def _resolve_disambiguation_choice(message: str, candidates: list) -> dict | Non
 
 
 @app.post("/chat")
-async def chat(req: ChatRequest, _: None = Depends(verify_admin_guard)):
+async def chat(req: ChatRequest, request: Request, _: None = Depends(verify_admin_guard)):
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        request_token.set(auth_header)
+
     pending = get_pending_state(req.session_id)
     normalized_message = _normalized_message(req.message)
 
