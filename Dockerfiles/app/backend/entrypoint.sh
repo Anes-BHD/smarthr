@@ -65,7 +65,7 @@ if [ "${DB_WIPE}" = "true" ]; then
     php /var/www/smartrh/artisan db:wipe --force --no-interaction
 fi
 
-php /var/www/smartrh/artisan migrate --force --no-interaction
+php /var/www/smartrh/artisan migrate --force --no-interaction --isolated
 php /var/www/smartrh/artisan module:migrate --force --no-interaction
 echo "  Migrations complete."
 
