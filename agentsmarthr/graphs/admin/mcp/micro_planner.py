@@ -1,4 +1,5 @@
 import json
+import time
 from typing import Any, Dict
 
 import httpx
@@ -51,19 +52,27 @@ def plan_employee_request(user_message: str) -> Dict[str, Any]:
         ],
     }
 
-    try:
-        response = httpx.post(
-            OPENROUTER_ENDPOINT,
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=30,
-        )
-        response.raise_for_status()
-        data = response.json()
-    except (httpx.HTTPError, ValueError):
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    data = None
+    for attempt in range(2):
+        try:
+            response = httpx.post(OPENROUTER_ENDPOINT, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            break
+        except httpx.HTTPStatusError as error:
+            if attempt == 0 and error.response.status_code == 429:
+                time.sleep(1.5)
+                continue
+            return _error_plan()
+        except (httpx.HTTPError, ValueError):
+            return _error_plan()
+
+    if data is None:
         return _error_plan()
 
     content = data.get("choices", [{}])[0].get("message", {}).get("content", "{}")
