@@ -109,6 +109,34 @@ JSON:
   "reason": "designation field requested"
 }
 
+User: Ahmed travaille comme quoi
+JSON:
+{
+  "handled": true,
+  "tool_name": "employees",
+  "action_name": "get_employee_info",
+  "arguments": {
+    "employee_name": "Ahmed",
+    "field": "designation"
+  },
+  "confidence": 0.9,
+  "reason": "designation field requested via travaille comme quoi"
+}
+
+User: statut de Ahmed
+JSON:
+{
+  "handled": true,
+  "tool_name": "employees",
+  "action_name": "get_employee_info",
+  "arguments": {
+    "employee_name": "Ahmed",
+    "field": "status"
+  },
+  "confidence": 0.9,
+  "reason": "status field requested"
+}
+
 User: donne moi info de Ahmed
 JSON:
 {
@@ -180,6 +208,22 @@ JSON:
   "reason": "employee update request"
 }
 
+User: change phone de sedki
+JSON:
+{
+  "handled": true,
+  "tool_name": "employees",
+  "action_name": "update_employee",
+  "arguments": {
+    "employee_name": "sedki",
+    "fields": {
+      "phone": ""
+    }
+  },
+  "confidence": 0.85,
+  "reason": "employee update request, phone value missing"
+}
+
 User: changer department de sedki à IT
 JSON:
 {
@@ -236,6 +280,20 @@ JSON:
   "reason": "employee analytics department count"
 }
 
+User: nombre employés dans IT
+JSON:
+{
+  "handled": true,
+  "tool_name": "employees",
+  "action_name": "employee_analytics",
+  "arguments": {
+    "metric": "count_by_department",
+    "department_name": "IT"
+  },
+  "confidence": 0.9,
+  "reason": "employee analytics department count"
+}
+
 User: liste les employés par department
 JSON:
 {
@@ -247,6 +305,19 @@ JSON:
   },
   "confidence": 0.9,
   "reason": "employee analytics group by department"
+}
+
+User: liste les employés par designation
+JSON:
+{
+  "handled": true,
+  "tool_name": "employees",
+  "action_name": "employee_analytics",
+  "arguments": {
+    "metric": "group_by_designation"
+  },
+  "confidence": 0.9,
+  "reason": "employee analytics group by designation"
 }
 
 User: liste des employés du département IT

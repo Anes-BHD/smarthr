@@ -10,8 +10,8 @@ Do not invent project data.
 
 Return ONLY valid JSON with this exact shape:
 {
-  "tool": "projects",
-  "action": "list_projects | project_details | project_deadline | project_leader | project_team | project_priority | count_projects | list_by_priority | projects_by_client | projects_by_leader | projects_by_member | projects_near_deadline | overdue_projects | project_recommendation | unsupported_action",
+  "tool_name": "projects",
+  "action_name": "list_projects | project_details | project_deadline | project_leader | project_team | project_priority | count_projects | list_by_priority | projects_by_client | projects_by_leader | projects_by_member | projects_near_deadline | overdue_projects | project_recommendation | unsupported_action",
   "project_name": null,
   "priority": null,
   "client_name": null,
@@ -60,73 +60,73 @@ Routing rules:
 Examples:
 User: liste les projets
 JSON:
-{"tool":"projects","action":"list_projects","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"list_projects","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
 
 User: montre-moi les projets
 JSON:
-{"tool":"projects","action":"list_projects","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"list_projects","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
 
 User: quels sont les projets
 JSON:
-{"tool":"projects","action":"list_projects","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"list_projects","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
 
 User: détails du projet eos
 JSON:
-{"tool":"projects","action":"project_details","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"project_details","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
 
 User: deadline du projet eos
 JSON:
-{"tool":"projects","action":"project_deadline","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"project_deadline","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
 
 User: qui est le chef du projet eos
 JSON:
-{"tool":"projects","action":"project_leader","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"project_leader","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
 
 User: équipe du projet eos
 JSON:
-{"tool":"projects","action":"project_team","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"project_team","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
 
 User: priorité de eos
 JSON:
-{"tool":"projects","action":"project_priority","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"project_priority","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
 
 User: combien de projets
 JSON:
-{"tool":"projects","action":"count_projects","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"count_projects","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
 
 User: projets priorité high
 JSON:
-{"tool":"projects","action":"list_by_priority","project_name":null,"priority":"high","client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"list_by_priority","project_name":null,"priority":"high","client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
 
 User: projets du client John Doe
 JSON:
-{"tool":"projects","action":"projects_by_client","project_name":null,"priority":null,"client_name":"John Doe","person_name":null,"date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"projects_by_client","project_name":null,"priority":null,"client_name":"John Doe","person_name":null,"date_filter":null,"confidence":0.95}
 
 User: projets dirigés par Oussama
 JSON:
-{"tool":"projects","action":"projects_by_leader","project_name":null,"priority":null,"client_name":null,"person_name":"Oussama","date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"projects_by_leader","project_name":null,"priority":null,"client_name":null,"person_name":"Oussama","date_filter":null,"confidence":0.95}
 
 User: sur quels projets travaille Sarra
 JSON:
-{"tool":"projects","action":"projects_by_member","project_name":null,"priority":null,"client_name":null,"person_name":"Sarra","date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"projects_by_member","project_name":null,"priority":null,"client_name":null,"person_name":"Sarra","date_filter":null,"confidence":0.95}
 
 User: projets proches de la deadline
 JSON:
-{"tool":"projects","action":"projects_near_deadline","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":"near_deadline","confidence":0.95}
+{"tool_name":"projects","action_name":"projects_near_deadline","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":"near_deadline","confidence":0.95}
 
 User: projets en retard
 JSON:
-{"tool":"projects","action":"overdue_projects","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":"overdue","confidence":0.95}
+{"tool_name":"projects","action_name":"overdue_projects","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":"overdue","confidence":0.95}
 
 User: recommande-moi quoi faire pour le projet eos
 JSON:
-{"tool":"projects","action":"project_recommendation","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
+{"tool_name":"projects","action_name":"project_recommendation","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.95}
 
 User: quel projet dois-je suivre en priorité
 JSON:
-{"tool":"projects","action":"project_recommendation","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.9}
+{"tool_name":"projects","action_name":"project_recommendation","project_name":null,"priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.9}
 
 User: change la deadline du projet eos
 JSON:
-{"tool":"projects","action":"unsupported_action","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.9}
+{"tool_name":"projects","action_name":"unsupported_action","project_name":"eos","priority":null,"client_name":null,"person_name":null,"date_filter":null,"confidence":0.9}
 """
