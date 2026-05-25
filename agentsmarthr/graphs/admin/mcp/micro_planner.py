@@ -1,8 +1,11 @@
 import json
+import logging
 import time
 from typing import Any, Dict
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from config import OPENROUTER_API_KEY, OPENROUTER_MODEL
 from graphs.admin.tools.absence.prompts import ABSENCE_PROMPT
@@ -65,11 +68,19 @@ def plan_employee_request(user_message: str) -> Dict[str, Any]:
             data = response.json()
             break
         except httpx.HTTPStatusError as error:
+            logger.error(
+                "OpenRouter HTTP %s — key_set=%s model=%s body=%.200s",
+                error.response.status_code,
+                bool(OPENROUTER_API_KEY),
+                OPENROUTER_MODEL,
+                error.response.text,
+            )
             if attempt == 0 and error.response.status_code == 429:
                 time.sleep(1.5)
                 continue
             return _error_plan()
-        except (httpx.HTTPError, ValueError):
+        except (httpx.HTTPError, ValueError) as error:
+            logger.error("OpenRouter request failed — %s: %s", type(error).__name__, error)
             return _error_plan()
 
     if data is None:
