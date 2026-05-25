@@ -164,21 +164,21 @@ jobs:
 #            --force-new-deployment \
 #            --region us-east-1
             
-#      - name: Deploy cache service
-#       run: |
-#          aws ecs update-service \
-#            --cluster smarthr \
-#            --service smarthr-cache-service \
-#            --force-new-deployment \
-#            --region us-east-1
+      - name: Deploy cache service
+        run: |
+          aws ecs update-service \
+            --cluster smarthr \
+            --service smarthr-cache-service \
+            --force-new-deployment \
+            --region us-east-1
 
 
-#      - name: Wait for cache service to stabilize
-#        run: |
-#          aws ecs wait services-stable \
-#            --cluster smarthr \
-#            --services smarthr-cache-service \
-#            --region us-east-1
+      - name: Wait for cache service to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster smarthr \
+            --services smarthr-cache-service \
+            --region us-east-1
 
             
       - name: Wait for app service to stabilize
