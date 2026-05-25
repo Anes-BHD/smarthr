@@ -49,6 +49,7 @@ def plan_employee_request(user_message: str) -> Dict[str, Any]:
     payload = {
         "model": OPENROUTER_MODEL,
         "temperature": 0,
+        "max_tokens": 512,
         "messages": [
             {"role": "system", "content": PLANNER_PROMPT},
             {"role": "user", "content": user_message},
@@ -78,7 +79,7 @@ def plan_employee_request(user_message: str) -> Dict[str, Any]:
             if attempt == 0 and error.response.status_code == 429:
                 time.sleep(1.5)
                 continue
-            return _error_plan()
+            return _error_plan()  # 401/402/4xx: no point retrying
         except (httpx.HTTPError, ValueError) as error:
             logger.error("OpenRouter request failed — %s: %s", type(error).__name__, error)
             return _error_plan()
