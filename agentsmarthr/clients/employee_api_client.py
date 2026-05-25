@@ -116,7 +116,14 @@ def find_employee_by_name(name: str, use_search: bool = False) -> Dict[str, Any]
     if not searched_name:
         return {"status": "missing_name", "employee": None}
 
-    employees = search_employees(name) if use_search else list_employees()
+    if use_search:
+        employees = search_employees(name)
+        # Laravel searches individual fields, so "Fatma Gharbi" finds nothing.
+        # Retry with the first word and let local matching handle the full name.
+        if not employees and " " in searched_name:
+            employees = search_employees(searched_name.split()[0])
+    else:
+        employees = list_employees()
     exact_matches = [
         employee
         for employee in employees
