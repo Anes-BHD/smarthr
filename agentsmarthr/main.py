@@ -14,6 +14,10 @@ from graphs.admin.mcp.micro_planner import OPENROUTER_ERROR_MESSAGE, plan_employ
 from graphs.admin.tools.absence.executor import ABSENCE_ACTIONS, execute_absence_tool
 from graphs.admin.tools.employees.executor import execute_employee_tool
 from graphs.admin.tools.ticket.executor import TICKET_ACTIONS, execute_ticket_tool
+from llm.conversation_gate import classify_message
+from llm.response_humanizer import humanize_response
+from memory.conversation_memory import clear_memory as clear_conversation_memory
+from memory.conversation_memory import get_memory, resolve_reference, update_memory
 from memory.pending_state import clear_pending_state, get_pending_state
 from security.admin_guard import verify_admin_guard
 from tools.projects.handler import PROJECT_ACTIONS, execute_project_tool
@@ -46,6 +50,15 @@ ABSENCE_ACTIONS = set(ABSENCE_ACTIONS)
 TICKET_ACTIONS = set(TICKET_ACTIONS)
 PROJECT_ACTIONS = set(PROJECT_ACTIONS)
 ALL_ACTIONS = EMPLOYEE_ACTIONS | ABSENCE_ACTIONS | TICKET_ACTIONS | PROJECT_ACTIONS
+TICKET_ACTION_ALIASES = {
+    "change_status": "update_ticket_status",
+    "change_ticket_status": "update_ticket_status",
+    "ticket_change_status": "update_ticket_status",
+    "update_status": "update_ticket_status",
+    "status_update": "update_ticket_status",
+    "modify_ticket_status": "update_ticket_status",
+    "set_ticket_status": "update_ticket_status",
+}
 
 app.add_middleware(
     CORSMiddleware,
@@ -99,22 +112,32 @@ def _normalize_plan(plan: dict) -> dict:
     tool_name = str(plan.get("tool_name") or "").lower()
     if tool_name in ("project", "projects"):
         plan["tool_name"] = "projects"
-    elif tool_name in ("employee", "employees"):
-        plan["tool_name"] = "employees"
-    elif tool_name in ("absence", "absences"):
-        plan["tool_name"] = "absence"
-    elif tool_name in ("ticket", "tickets"):
+    if plan.get("action_name") in TICKET_ACTION_ALIASES:
+        plan["action_name"] = TICKET_ACTION_ALIASES[plan["action_name"]]
+        if not plan.get("tool_name"):
+            plan["tool_name"] = "ticket"
+    if plan.get("tool_name") in {"tickets", "ticket"}:
         plan["tool_name"] = "ticket"
 
-    action_name = str(plan.get("action_name") or "").lower()
-    if action_name == "add_employee":
-        plan["action_name"] = "create_employee"
-    elif action_name == "edit_employee":
-        plan["action_name"] = "update_employee"
-    elif action_name == "remove_employee":
-        plan["action_name"] = "delete_employee"
-    elif action_name in ("list_clients", "get_clients"):
-        plan["action_name"] = "projects_by_client"
+    arguments = plan.get("arguments")
+    if isinstance(arguments, dict):
+        for key in (
+            "employee_name",
+            "project_name",
+            "ticket_code",
+            "ticket_ref",
+            "status",
+            "field",
+            "priority",
+            "client_name",
+            "person_name",
+        ):
+            if plan.get(key) not in (None, "", []) and not arguments.get(key):
+                arguments[key] = plan[key]
+        if plan.get("tool_name") == "ticket":
+            ticket_ref = arguments.get("ticket_ref") or arguments.get("ticket")
+            if ticket_ref and not arguments.get("ticket_code"):
+                arguments["ticket_code"] = ticket_ref
 
     if plan.get("action_name") in EMPLOYEE_ACTIONS and not plan.get("tool_name"):
         plan["tool_name"] = "employees"
@@ -127,8 +150,141 @@ def _normalize_plan(plan: dict) -> dict:
     return plan
 
 
-def _plan_request(message: str) -> dict:
-    return _normalize_plan(plan_employee_request(message))
+def _plan_arguments(plan: dict) -> dict:
+    arguments = plan.get("arguments")
+    if not isinstance(arguments, dict):
+        arguments = {}
+        plan["arguments"] = arguments
+    for key in (
+        "employee_name",
+        "project_name",
+        "ticket_code",
+        "ticket_ref",
+        "status",
+        "field",
+        "priority",
+        "client_name",
+        "person_name",
+    ):
+        if plan.get(key) not in (None, "", []) and not arguments.get(key):
+            arguments[key] = plan[key]
+    return arguments
+
+
+def _set_plan_value(plan: dict, key: str, value: str) -> None:
+    if value in (None, "", []):
+        return
+    arguments = _plan_arguments(plan)
+    if not arguments.get(key) and not plan.get(key):
+        arguments[key] = value
+        plan[key] = value
+
+
+def _apply_memory_references(session_id: str, message: str, plan: dict) -> dict:
+    resolved = resolve_reference(session_id, message)
+    tool_name = plan.get("tool_name")
+    arguments = _plan_arguments(plan)
+
+    if tool_name == "employees" and resolved.get("employee_name") and not arguments.get("employee_name"):
+        _set_plan_value(plan, "employee_name", resolved["employee_name"])
+    if tool_name == "projects" and resolved.get("project_name") and not (arguments.get("project_name") or plan.get("project_name")):
+        _set_plan_value(plan, "project_name", resolved["project_name"])
+    if tool_name == "ticket" and resolved.get("ticket_ref"):
+        if not (arguments.get("ticket_code") or arguments.get("ticket_ref") or plan.get("ticket_code")):
+            _set_plan_value(plan, "ticket_code", resolved["ticket_ref"])
+    if tool_name == "ticket" and arguments.get("ticket_ref") and not arguments.get("ticket_code"):
+        _set_plan_value(plan, "ticket_code", arguments["ticket_ref"])
+
+    return plan
+
+
+def _plan_request(session_id: str, message: str) -> dict:
+    memory = get_memory(session_id)
+    plan = _normalize_plan(plan_employee_request(message, memory=memory))
+    return _apply_memory_references(session_id, message, plan)
+
+
+def _memory_reset_requested(message: str) -> bool:
+    text = _normalized_message(message)
+    return any(
+        phrase in text
+        for phrase in (
+            "reset mémoire",
+            "reset memoire",
+            "oublie le contexte",
+            "recommencer conversation",
+        )
+    )
+
+
+def _selected_employee_name(employee: dict) -> str | None:
+    if not isinstance(employee, dict):
+        return None
+    full_name = employee.get("full_name") or employee.get("name")
+    if full_name:
+        return str(full_name)
+    firstname = employee.get("firstname") or ""
+    lastname = employee.get("lastname") or ""
+    name = f"{firstname} {lastname}".strip()
+    return name or employee.get("email")
+
+
+def _response_successful(message: str) -> bool:
+    text = _normalized_message(message)
+    failure_markers = [
+        "quel ",
+        "quelle ",
+        "je n’ai pas trouvé",
+        "je n'ai pas trouvé",
+        "introuvable",
+        "impossible",
+        "répondez",
+        "repondez",
+        "n’est pas encore",
+        "n'est pas encore",
+        "annul",
+        "erreur",
+    ]
+    return bool(text) and not any(marker in text for marker in failure_markers)
+
+
+def _update_conversation_memory(session_id: str, plan: dict, final_message: str) -> None:
+    if not _response_successful(final_message):
+        return
+
+    arguments = plan.get("arguments") if isinstance(plan.get("arguments"), dict) else {}
+    tool_name = plan.get("tool_name")
+    action_name = plan.get("action_name") or plan.get("action") or plan.get("intent")
+
+    memory_tool = "tickets" if tool_name == "ticket" else tool_name
+    updates = {
+        "last_tool": memory_tool,
+        "last_action": action_name,
+    }
+
+    if tool_name == "employees":
+        selected_employee = _selected_employee_name(plan.get("_selected_employee"))
+        employee_name = selected_employee or arguments.get("employee_name") or plan.get("employee_name")
+        if employee_name:
+            updates["last_employee"] = employee_name
+
+    if tool_name == "projects":
+        project_name = arguments.get("project_name") or plan.get("project_name")
+        if project_name:
+            updates["last_project"] = project_name
+
+    if tool_name == "ticket":
+        ticket_ref = (
+            arguments.get("ticket_code")
+            or arguments.get("ticket_ref")
+            or arguments.get("code")
+            or plan.get("ticket_code")
+            or plan.get("ticket_ref")
+        )
+        if ticket_ref:
+            updates["last_ticket"] = ticket_ref
+
+    update_memory(session_id, **updates)
 
 
 def _looks_like_new_intention(message: str) -> bool:
@@ -239,6 +395,19 @@ async def chat(req: ChatRequest, request: Request, _: None = Depends(verify_admi
     pending = get_pending_state(req.session_id)
     normalized_message = _normalized_message(req.message)
 
+    if _memory_reset_requested(req.message):
+        clear_conversation_memory(req.session_id)
+        return {
+            "message": "Contexte de conversation réinitialisé.",
+            "meta": {
+                "tool_name": None,
+                "action_name": "reset_memory",
+                "field": None,
+                "employee_name": None,
+                "project_name": None,
+            },
+        }
+
     if pending and pending.get("awaiting_disambiguation"):
         candidates = pending.get("candidates") or []
         selected_employee = _resolve_disambiguation_choice(req.message, candidates)
@@ -292,7 +461,7 @@ async def chat(req: ChatRequest, request: Request, _: None = Depends(verify_admi
         else:
             if _looks_like_new_intention(req.message):
                 clear_pending_state(req.session_id)
-            new_plan = _plan_request(req.message)
+            new_plan = _plan_request(req.session_id, req.message)
             if not new_plan.get("error") and (
                 new_plan.get("action_name") in ALL_ACTIONS
                 or new_plan.get("tool_name") == "projects"
@@ -317,7 +486,20 @@ async def chat(req: ChatRequest, request: Request, _: None = Depends(verify_admi
                 }
                 final_message = "Répondez par oui ou non."
     else:
-        plan = _plan_request(req.message)
+        gate_result = classify_message(req.message, memory=get_memory(req.session_id))
+        if gate_result.get("category") in {"chitchat", "offtopic"}:
+            return {
+                "message": gate_result.get("response"),
+                "meta": {
+                    "tool_name": None,
+                    "action_name": gate_result.get("category"),
+                    "field": None,
+                    "employee_name": None,
+                    "project_name": None,
+                },
+            }
+
+        plan = _plan_request(req.session_id, req.message)
         plan["_session_id"] = req.session_id
         plan["_raw_message"] = req.message
 
@@ -350,6 +532,16 @@ async def chat(req: ChatRequest, request: Request, _: None = Depends(verify_admi
                 final_message = execute_project_tool(plan)
             else:
                 final_message = execute_employee_tool(plan)
+
+    raw_response = final_message
+    _update_conversation_memory(req.session_id, plan, raw_response)
+    final_message = humanize_response(
+        raw_response=raw_response,
+        user_message=req.message,
+        tool=plan.get("tool_name"),
+        action=plan.get("action_name"),
+        memory=get_memory(req.session_id),
+    )
 
     arguments = plan.get("arguments") or {}
     return {

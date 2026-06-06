@@ -688,6 +688,45 @@ JSON:
   "reason": "close ticket requested"
 }
 
+User: change son statut à closed
+JSON:
+{
+  "handled": true,
+  "tool_name": "ticket",
+  "action_name": "update_ticket_status",
+  "arguments": {
+    "status": "closed"
+  },
+  "confidence": 0.9,
+  "reason": "ticket status update requested; ticket code should come from memory context"
+}
+
+User: modifier son statut à closed
+JSON:
+{
+  "handled": true,
+  "tool_name": "ticket",
+  "action_name": "update_ticket_status",
+  "arguments": {
+    "status": "closed"
+  },
+  "confidence": 0.9,
+  "reason": "ticket status update requested; ticket code should come from memory context"
+}
+
+User: mets son statut closed
+JSON:
+{
+  "handled": true,
+  "tool_name": "ticket",
+  "action_name": "update_ticket_status",
+  "arguments": {
+    "status": "closed"
+  },
+  "confidence": 0.9,
+  "reason": "ticket status update requested; ticket code should come from memory context"
+}
+
 User: assigne le ticket TKT-0003 à Ahmed
 JSON:
 {
@@ -730,3 +769,112 @@ JSON:
   "reason": "ticket assignment requested"
 }
 '''
+
+
+LEGACY_TICKET_PLANNER_PROMPT = """
+Tu es le planner du module Tickets SmartHR.
+
+Retourne uniquement un JSON valide :
+{
+  "tool": "ticket",
+  "action": "...",
+  "ticket_ref": null,
+  "employee_name": null,
+  "priority": null,
+  "status": null,
+  "description": null,
+  "confidence": 0.0
+}
+
+Actions disponibles :
+- list_tickets
+- search_tickets
+- tickets_by_status
+- tickets_by_priority
+- tickets_by_employee
+- count_tickets_by_status
+- count_tickets_by_priority
+- show_ticket
+- create_ticket
+- update_ticket_status
+- assign_ticket
+- unsupported_action
+
+Règles :
+- Si l’utilisateur demande un ticket précis : show_ticket.
+- Si l’utilisateur dit HIGH, LOW, MEDIUM, URGENT : tickets_by_priority.
+- Si l’utilisateur dit OPEN, CLOSED, NEW, ONHOLD, INPROGRESS, COMPLETED, CANCELLED, REOPEN : remplir status.
+- Si l’utilisateur demande combien/nombre/count : utiliser count_tickets_by_status ou count_tickets_by_priority.
+- Si l’utilisateur dit change/modifie/mets/mettre/update + statut/status + statut valide : update_ticket_status.
+- Statuts valides : new, open, reopen, onhold, closed, inprogress, cancelled, completed.
+- Normaliser les statuts en minuscule : COMPLETED -> completed, CLOSED -> closed.
+- Si ticket_ref est absent et mémoire contient ticket=TKT-xxxx, utiliser ce ticket.
+- Ne jamais inventer.
+- Réponds uniquement en JSON.
+
+Exemples :
+User: montre ticket TKT-0007
+JSON: {"tool":"ticket","action":"show_ticket","ticket_ref":"TKT-0007","employee_name":null,"priority":null,"status":null,"description":null,"confidence":0.95}
+
+User: change son statut à open
+JSON: {"tool":"ticket","action":"update_ticket_status","ticket_ref":null,"employee_name":null,"priority":null,"status":"open","description":null,"confidence":0.95}
+
+User: change son statut à COMPLETED
+JSON: {"tool":"ticket","action":"update_ticket_status","ticket_ref":"TKT-0007","employee_name":null,"priority":null,"status":"completed","description":null,"confidence":0.95}
+
+User: liste les tickets HIGH
+JSON: {"tool":"ticket","action":"tickets_by_priority","ticket_ref":null,"employee_name":null,"priority":"HIGH","status":null,"description":null,"confidence":0.95}
+
+User: combien de tickets OPEN
+JSON: {"tool":"ticket","action":"count_tickets_by_status","ticket_ref":null,"employee_name":null,"priority":null,"status":"OPEN","description":null,"confidence":0.95}
+
+User: tickets de sarra
+JSON: {"tool":"ticket","action":"tickets_by_employee","ticket_ref":null,"employee_name":"sarra","priority":null,"status":null,"description":null,"confidence":0.95}
+"""
+
+
+TICKET_PLANNER_PROMPT = """
+Tu es le planner JSON du module Tickets SmartHR.
+
+Ta mission :
+Transformer la demande utilisateur en JSON.
+
+Réponds uniquement avec JSON valide, sans texte autour.
+
+Schéma :
+{
+  "tool": "ticket",
+  "action": "show_ticket | search_tickets | tickets_by_priority | tickets_by_status | count_tickets | create_ticket | update_ticket_status | assign_ticket | unsupported_action",
+  "ticket_ref": null,
+  "employee_name": null,
+  "priority": null,
+  "status": null,
+  "description": null,
+  "confidence": 0.0
+}
+
+Actions :
+- show_ticket : consulter un ticket précis par référence.
+- search_tickets : rechercher tickets par texte.
+- tickets_by_priority : filtrer par priorité.
+- tickets_by_status : filtrer par statut.
+- count_tickets : compter des tickets.
+- create_ticket : créer un ticket.
+- update_ticket_status : changer le statut d’un ticket.
+- assign_ticket : affecter un ticket.
+- unsupported_action : autre demande non supportée.
+
+Statuts valides :
+new, open, reopen, onhold, closed, inprogress, cancelled, completed
+
+Priorités valides :
+low, medium, high, urgent
+
+Règles :
+- Si la demande contient une référence comme TKT-0007, mets-la dans ticket_ref.
+- Si l’utilisateur veut consulter/voir/afficher/détails un ticket précis, action = show_ticket.
+- Si l’utilisateur veut changer/modifier/mettre le statut, action = update_ticket_status.
+- Si ticket_ref est absent mais mémoire contient ticket=..., utiliser ce ticket.
+- Normalise status et priority en minuscules.
+- N’invente aucune valeur.
+"""
