@@ -887,12 +887,7 @@ def _execute_update_ticket_status(plan: Dict[str, Any]) -> str:
 
     slots = {"ticket_code": display_code, "requested_ticket_code": ticket_code, "status": status}
     _set_ticket_pending(session_id, UPDATE_TICKET_STATUS, slots)
-    return (
-        "Confirmez-vous le changement de statut ?\n"
-        f"Ticket demandé : {_ticket_display_code(ticket_code)}\n"
-        f"Ticket trouvé : {_ticket_display_code(display_code)}\n"
-        f"Nouveau statut : {status}"
-    )
+    return f"Voulez-vous confirmer le changement du statut du ticket {_ticket_display_code(display_code)} vers {status} ? oui/non"
 
 
 def _execute_confirmed_assign_ticket(plan: Dict[str, Any]) -> str:
