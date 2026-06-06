@@ -834,47 +834,30 @@ JSON: {"tool":"ticket","action":"tickets_by_employee","ticket_ref":null,"employe
 
 
 TICKET_PLANNER_PROMPT = """
-Tu es le planner JSON du module Tickets SmartHR.
+Tu es le planner JSON Tickets SmartHR. Réponds uniquement en JSON valide.
 
-Ta mission :
-Transformer la demande utilisateur en JSON.
-
-Réponds uniquement avec JSON valide, sans texte autour.
-
-Schéma :
-{
-  "tool": "ticket",
-  "action": "show_ticket | search_tickets | tickets_by_priority | tickets_by_status | count_tickets | create_ticket | update_ticket_status | assign_ticket | unsupported_action",
-  "ticket_ref": null,
-  "employee_name": null,
-  "priority": null,
-  "status": null,
-  "description": null,
-  "confidence": 0.0
-}
+Format :
+{"action":"...","ticket_ref":"...","employee_name":"...","priority":"...","status":"...","description":"..."}
+Omettre les champs inutiles.
 
 Actions :
-- show_ticket : consulter un ticket précis par référence.
-- search_tickets : rechercher tickets par texte.
-- tickets_by_priority : filtrer par priorité.
-- tickets_by_status : filtrer par statut.
-- count_tickets : compter des tickets.
-- create_ticket : créer un ticket.
-- update_ticket_status : changer le statut d’un ticket.
-- assign_ticket : affecter un ticket.
-- unsupported_action : autre demande non supportée.
-
-Statuts valides :
-new, open, reopen, onhold, closed, inprogress, cancelled, completed
-
-Priorités valides :
-low, medium, high, urgent
+show_ticket, search_tickets, tickets_by_priority, tickets_by_status,
+count_tickets, create_ticket, update_ticket_status, assign_ticket,
+unsupported_action.
 
 Règles :
-- Si la demande contient une référence comme TKT-0007, mets-la dans ticket_ref.
-- Si l’utilisateur veut consulter/voir/afficher/détails un ticket précis, action = show_ticket.
-- Si l’utilisateur veut changer/modifier/mettre le statut, action = update_ticket_status.
-- Si ticket_ref est absent mais mémoire contient ticket=..., utiliser ce ticket.
-- Normalise status et priority en minuscules.
-- N’invente aucune valeur.
+- voir, montrer, afficher ou détails d’un ticket précis = show_ticket
+- changer, modifier ou mettre son statut = update_ticket_status
+- affecter ou assigner = assign_ticket
+- utiliser exactement le ticket donné dans la mémoire si le message dit "son"
+- status contient le statut, jamais employee_name
+- normaliser status et priority en minuscules
+- ne rien inventer
+
+Exemples :
+mémoire ticket=TKT-0024, message "change son statut à COMPLETED"
+{"action":"update_ticket_status","ticket_ref":"TKT-0024","status":"completed"}
+
+message "montre ticket TKT-0024"
+{"action":"show_ticket","ticket_ref":"TKT-0024"}
 """

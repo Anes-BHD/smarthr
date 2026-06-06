@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Any, Dict
 import unicodedata
 
@@ -184,11 +185,31 @@ def _prompt_for_tool(tool: str) -> str:
 
 
 def _normalize_ticket_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
-    action = plan.get("action") or plan.get("action_name")
+    action = plan.get("action") or plan.get("action_name") or plan.get("a")
+    action_aliases = {
+        "show": "show_ticket",
+        "search": "search_tickets",
+        "priority": "tickets_by_priority",
+        "status": "tickets_by_status",
+        "count": "count_tickets",
+        "create": "create_ticket",
+        "update": "update_ticket_status",
+        "assign": "assign_ticket",
+        "unsupported": "unsupported_action",
+    }
+    action = action_aliases.get(action, action)
     arguments = plan.get("arguments") if isinstance(plan.get("arguments"), dict) else {}
 
+    short_keys = {
+        "ticket_ref": "r",
+        "employee_name": "e",
+        "priority": "p",
+        "status": "s",
+        "description": "d",
+    }
+
     def value(key: str) -> Any:
-        return arguments.get(key) or plan.get(key)
+        return arguments.get(key) or plan.get(key) or plan.get(short_keys.get(key, ""))
 
     ticket_ref = value("ticket_ref") or value("ticket_code")
     employee_name = value("employee_name")
@@ -197,7 +218,7 @@ def _normalize_ticket_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(status, str):
         status = _extract_ticket_status(status) or status.lower()
     description = value("description")
-    confidence = plan.get("confidence", 0.8)
+    confidence = plan.get("confidence") or plan.get("c") or 0.8
 
     mapped_action = action
     mapped_arguments: Dict[str, Any] = {}
@@ -269,15 +290,15 @@ def _normalize_ticket_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _memory_context(memory: Dict[str, Any] | None) -> str:
+def _memory_context(memory: Dict[str, Any] | None, tool: str) -> str:
     memory = memory or {}
-    return (
-        "Mémoire compacte :\n"
-        f"employee={memory.get('last_employee') or 'null'}\n"
-        f"ticket={memory.get('last_ticket') or 'null'}\n"
-        f"project={memory.get('last_project') or 'null'}\n"
-        f"tool={memory.get('last_tool') or 'null'}"
-    )
+    if tool == "ticket":
+        return f"ticket={memory.get('last_ticket') or 'null'}"
+    if tool == "projects":
+        return f"project={memory.get('last_project') or 'null'}"
+    if tool == "employees":
+        return f"employee={memory.get('last_employee') or 'null'}"
+    return f"tool={memory.get('last_tool') or 'null'}"
 
 
 def _extract_json_object(raw_content: str) -> Dict[str, Any] | None:
@@ -305,11 +326,22 @@ def _extract_json_object(raw_content: str) -> Dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
-def _is_max_tokens_budget_error(response: httpx.Response | None) -> bool:
+def _lock_plan_tool(plan: Dict[str, Any], selected_tool: str) -> Dict[str, Any]:
+    if selected_tool not in {"employees", "ticket", "absence", "projects"}:
+        return plan
+    plan["tool"] = selected_tool
+    plan["tool_name"] = selected_tool
+    return plan
+
+
+def _affordable_max_tokens(response: httpx.Response | None) -> int | None:
     if response is None or response.status_code != 402:
-        return False
+        return None
     body = (response.text or "").lower()
-    return "max_tokens" in body or "fewer max_tokens" in body or "can only afford" in body
+    if not ("max_tokens" in body or "fewer max_tokens" in body or "can only afford" in body):
+        return None
+    match = re.search(r"can only afford\s+(\d+)", body)
+    return int(match.group(1)) if match else 100
 
 
 def _call_openrouter(payload: Dict[str, Any]) -> Dict[str, Any] | None:
@@ -329,10 +361,12 @@ def _call_openrouter(payload: Dict[str, Any]) -> Dict[str, Any] | None:
         print(f"[OPENROUTER ERROR] {e}")
         print(f"[OPENROUTER STATUS] {e.response.status_code}")
         print(f"[OPENROUTER BODY] {e.response.text}")
-        if _is_max_tokens_budget_error(e.response) and payload.get("max_tokens") != 100:
-            print("[OPENROUTER RETRY] max_tokens=100")
+        affordable_tokens = _affordable_max_tokens(e.response)
+        current_tokens = int(payload.get("max_tokens") or 0)
+        if affordable_tokens and affordable_tokens < current_tokens:
+            print(f"[OPENROUTER RETRY] max_tokens={affordable_tokens}")
             retry_payload = dict(payload)
-            retry_payload["max_tokens"] = 100
+            retry_payload["max_tokens"] = affordable_tokens
             return _call_openrouter(retry_payload)
         return None
     except httpx.HTTPError as e:
@@ -361,10 +395,13 @@ def plan_employee_request(user_message: str, memory: Dict[str, Any] | None = Non
         "model": OPENROUTER_MODEL,
         "temperature": 0,
         "max_tokens": 120,
+        "reasoning": {"enabled": False},
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "system", "content": _memory_context(memory)},
-            {"role": "user", "content": user_message},
+            {
+                "role": "user",
+                "content": f"{_memory_context(memory, tool)}\nDemande: {user_message}",
+            },
         ],
     }
 
@@ -379,4 +416,5 @@ def plan_employee_request(user_message: str, memory: Dict[str, Any] | None = Non
         print("[OPENROUTER JSON PARSE ERROR]", content)
         return _error_plan()
 
+    parsed = _lock_plan_tool(parsed, tool)
     return _normalize_ticket_plan(parsed) if tool == "ticket" else parsed
