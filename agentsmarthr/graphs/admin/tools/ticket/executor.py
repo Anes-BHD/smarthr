@@ -14,6 +14,7 @@ from graphs.admin.tools.ticket.tool import (
     get_all_tickets,
     get_employee_ticket_load,
     get_ticket_code,
+    get_ticket_id,
     get_ticket_employee_name as tool_get_ticket_employee_name,
     get_ticket_subject,
     normalize_priority as tool_normalize_priority,
@@ -841,9 +842,23 @@ def _execute_confirmed_update_ticket_status(plan: Dict[str, Any]) -> str:
 
     slots = pending.get("pending_slots") or {}
     ticket_code = slots.get("ticket_code")
+    ticket_id = slots.get("ticket_id")
     status = slots.get("status")
     try:
-        update_ticket_status_backend(ticket_code, status)
+        if ticket_id:
+            tickets = get_all_tickets()
+            ticket = next((t for t in tickets if str(get_ticket_id(t)) == str(ticket_id)), None)
+            if not ticket:
+                clear_pending_state(session_id)
+                return _ticket_not_found_message(ticket_code or str(ticket_id))
+            backend_status = to_laravel_ticket_status(status)
+            if not backend_status:
+                clear_pending_state(session_id)
+                return "Statut invalide."
+            payload = build_full_ticket_update_payload(ticket, {"status": backend_status})
+            php_api_client.patch(f"/api/v1/tickets/{ticket_id}", json=payload)
+        else:
+            update_ticket_status_backend(ticket_code, status)
         clear_pending_state(session_id)
     except php_api_client.SmartHRApiError as error:
         clear_pending_state(session_id)

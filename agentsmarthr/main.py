@@ -14,7 +14,7 @@ from graphs.admin.mcp.micro_planner import OPENROUTER_ERROR_MESSAGE, plan_employ
 from graphs.admin.tools.absence.executor import ABSENCE_ACTIONS, execute_absence_tool
 from graphs.admin.tools.employees.executor import execute_employee_tool
 from graphs.admin.tools.ticket.executor import TICKET_ACTIONS, execute_ticket_tool
-from graphs.admin.tools.ticket.tool import get_ticket_code as get_ticket_display_code
+from graphs.admin.tools.ticket.tool import get_ticket_code as get_ticket_display_code, get_ticket_id as get_ticket_unique_id
 from llm.conversation_gate import classify_message
 from llm.response_humanizer import humanize_response
 from memory.conversation_memory import clear_memory as clear_conversation_memory
@@ -420,8 +420,16 @@ async def chat(req: ChatRequest, request: Request, _: None = Depends(verify_admi
             ordinal_map = {"1": 0, "2": 1, "3": 2, "4": 3, "5": 4}
             selected_index = ordinal_map.get(normalized_message.strip())
             selected_ticket = candidates[selected_index] if selected_index is not None and selected_index < len(candidates) else None
+            if selected_ticket is None:
+                msg_upper = req.message.strip().upper().replace(" ", "").replace("#", "")
+                for candidate in candidates:
+                    code = get_ticket_display_code(candidate).upper().replace(" ", "").replace("-", "").replace("#", "")
+                    if msg_upper.replace("-", "") == code:
+                        selected_ticket = candidate
+                        break
             if selected_ticket:
                 display_code = get_ticket_display_code(selected_ticket)
+                ticket_id = get_ticket_unique_id(selected_ticket)
                 pending_status = pending.get("pending_status", "")
                 clear_pending_state(req.session_id)
                 set_pending_state(
@@ -429,7 +437,7 @@ async def chat(req: ChatRequest, request: Request, _: None = Depends(verify_admi
                     {
                         "tool_name": "ticket",
                         "pending_action": pending_action,
-                        "pending_slots": {"ticket_code": display_code, "status": pending_status},
+                        "pending_slots": {"ticket_code": display_code, "ticket_id": ticket_id, "status": pending_status},
                         "awaiting_confirmation": True,
                     },
                 )
