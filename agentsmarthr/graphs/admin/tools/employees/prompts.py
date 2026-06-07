@@ -43,6 +43,7 @@ UPDATE supported fields:
 - phone
 - department_name
 - designation_name
+- status (actif/inactif only)
 
 Field synonyms:
 - phone: tel, téléphone, telephone, numéro, numero, num, phone, mobile, تليفون
@@ -238,6 +239,38 @@ JSON:
   },
   "confidence": 0.9,
   "reason": "employee department update request"
+}
+
+employee=walid
+User: quel est son téléphone ?
+JSON:
+{
+  "handled": true,
+  "tool_name": "employees",
+  "action_name": "get_employee_info",
+  "arguments": {
+    "employee_name": "walid",
+    "field": "phone"
+  },
+  "confidence": 0.95,
+  "reason": "phone field, employee from context"
+}
+
+employee=walid
+User: change son statut à inactif
+JSON:
+{
+  "handled": true,
+  "tool_name": "employees",
+  "action_name": "update_employee",
+  "arguments": {
+    "employee_name": "walid",
+    "fields": {
+      "status": "inactif"
+    }
+  },
+  "confidence": 0.9,
+  "reason": "status update, employee from context"
 }
 
 User: supprimer employé sedki

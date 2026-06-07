@@ -176,7 +176,7 @@ def _set_plan_value(plan: dict, key: str, value: str) -> None:
     if value in (None, "", []):
         return
     arguments = _plan_arguments(plan)
-    if not arguments.get(key) and not plan.get(key):
+    if arguments.get(key) in (None, "", "null") and plan.get(key) in (None, "", "null"):
         arguments[key] = value
         plan[key] = value
 

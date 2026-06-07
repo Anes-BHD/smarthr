@@ -1,5 +1,6 @@
 import json
 import re
+import unicodedata
 from typing import Any, Dict, List, Optional
 
 from clients import department_api_client, designation_api_client, employee_api_client, php_api_client
@@ -588,6 +589,25 @@ def _update_missing_message(employee_name: str, fields: Dict[str, str]) -> str:
     return ""
 
 
+_EMPLOYEE_STATUS_BOOL: Dict[str, int] = {
+    "actif": 1, "active": 1, "activé": 1, "activee": 1, "activer": 1,
+    "enable": 1, "enabled": 1, "1": 1, "true": 1, "oui": 1, "yes": 1,
+    "inactif": 0, "inactive": 0, "inactiver": 0, "desactiver": 0,
+    "désactivé": 0, "desactive": 0, "désactiver": 0,
+    "disable": 0, "disabled": 0, "0": 0, "false": 0, "non": 0, "no": 0,
+}
+
+
+def _normalize_employee_status(value: str) -> int:
+    normalized = unicodedata.normalize("NFKD", _clean(value).lower())
+    normalized = "".join(c for c in normalized if not unicodedata.combining(c))
+    if normalized in _EMPLOYEE_STATUS_BOOL:
+        return _EMPLOYEE_STATUS_BOOL[normalized]
+    raise ValueError(
+        f"Statut invalide : '{value}'. Utilisez 'actif' pour activer ou 'inactif' pour désactiver un employé."
+    )
+
+
 def _build_update_payload(employee: Dict[str, Any], fields: Dict[str, str]) -> Dict[str, Any]:
     payload: Dict[str, Any] = {
         "firstname": employee_api_client.get_employee_field(employee, "firstname"),
@@ -604,7 +624,7 @@ def _build_update_payload(employee: Dict[str, Any], fields: Dict[str, str]) -> D
             payload[key] = fields[key]
 
     if fields.get("status"):
-        payload["status"] = fields["status"]
+        payload["status"] = _normalize_employee_status(fields["status"])
 
     if fields.get("department_name"):
         department_result = _resolve_department(fields["department_name"])
