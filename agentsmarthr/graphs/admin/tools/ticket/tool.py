@@ -108,7 +108,7 @@ def get_ticket_code(ticket: Dict[str, Any]) -> str:
     for key in ("ticket_code", "tk_id", "code", "reference", "ticket_number"):
         value = clean_text(ticket.get(key))
         if value:
-            return value
+            return value.lstrip("#")
 
     ticket_id = clean_text(ticket.get("id"))
     if ticket_id:

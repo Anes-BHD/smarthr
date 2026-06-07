@@ -72,6 +72,15 @@ def _detect_tool(user_message: str, memory: Dict[str, Any] | None = None) -> str
         "assigne",
         "affecter",
     }
+    ticket_status_values = {
+        "completed",
+        "inprogress",
+        "onhold",
+        "reopen",
+        "reopened",
+        "cancelled",
+        "canceled",
+    }
     project_terms = {
         "projet",
         "projets",
@@ -117,7 +126,11 @@ def _detect_tool(user_message: str, memory: Dict[str, Any] | None = None) -> str
     if any(term in text for term in absence_terms):
         return "absence"
 
-    if memory.get("last_ticket") and any(term in text for term in ("son statut", "son ticket", "ce ticket", "ticket actuel")):
+    if memory.get("last_ticket") and any(term in text for term in ("son statut", "son ticket", "ce ticket", "ticket actuel", "statut", "status")):
+        return "ticket"
+    if memory.get("last_ticket") and any(term in text.split() for term in ticket_status_values):
+        return "ticket"
+    if any(term in text.split() for term in ticket_status_values):
         return "ticket"
     if memory.get("last_project") and any(term in text for term in ("sa deadline", "ce projet", "son projet", "projet actuel")):
         return "projects"

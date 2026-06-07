@@ -41,7 +41,7 @@ class TicketFactory extends Factory
                 'ticket_id' => $ticket->id
             ]);
             $ticket->update([
-                'tk_id' => '#TKT-'.pad_zeros(Ticket::count()+1),
+                'tk_id' => 'TKT-'.pad_zeros($ticket->id),
             ]);
         });
     }
