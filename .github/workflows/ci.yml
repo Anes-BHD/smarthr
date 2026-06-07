@@ -13,8 +13,154 @@ on:
 permissions:
   actions: read
   contents: read
+  security-events: write
 
 jobs:
+  # ─────────────────────────────────────────────
+  # 1. Unit & Integration Tests
+  # ─────────────────────────────────────────────
+  test:
+    runs-on: ubuntu-latest
+    env:
+      PHP_CS_FIXER_IGNORE_ENV: 1
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, mbstring, exif, pcntl, bcmath, gd, zip, intl, opcache, redis
+          tools: composer:v2
+
+      - name: Cache Composer vendor
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Cache Composer cache dir
+        uses: actions/cache@v3
+        with:
+          path: ~/.composer/cache
+          key: ${{ runner.os }}-composer-cache-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-cache-
+
+      - name: Install Composer dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Setup Node 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build --if-present
+
+      - name: Setup Laravel environment
+        run: |
+          echo "APP_NAME=Smarthr"        > .env
+          echo "APP_ENV=testing"        >> .env
+          echo "APP_KEY=base64:$(openssl rand -base64 32)" >> .env
+          echo "DB_CONNECTION=sqlite"   >> .env
+          echo "DB_DATABASE=:memory:"   >> .env
+          echo "CACHE_DRIVER=array"     >> .env
+          echo "SESSION_DRIVER=array"   >> .env
+          echo "QUEUE_CONNECTION=sync"  >> .env
+      - name: Run PHPUnit
+        run: |
+          mkdir -p test-results
+          ./vendor/bin/phpunit --log-junit test-results/phpunit.xml
+      - name: Upload PHPUnit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phpunit-results
+          path: test-results
+
+  # ─────────────────────────────────────────────
+  # 2. OWASP Dependency-Check
+  # ─────────────────────────────────────────────
+  dependency-check:
+    name: OWASP Dependency-Check
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Run OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        id: owasp
+        continue-on-error: true
+        with:
+          project: 'smarthr'
+          path: '.'
+          format: 'ALL'
+          out: 'dependency-check-report'
+          args: >
+            --enableRetired
+            --enableExperimental
+      - name: Upload Dependency-Check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: dependency-check-report
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: dependency-check-report/dependency-check-report.sarif
+
+  # ─────────────────────────────────────────────
+  # 3. Trivy Vulnerability Scan
+  # ─────────────────────────────────────────────
+  vulnerability-scan:
+    name: Trivy Vulnerability Scan
+    runs-on: ubuntu-latest
+    needs: dependency-check
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-results.sarif'
+
   # ─────────────────────────────────────────────
   # 1. Build & Push Docker Images to ECR
   # ─────────────────────────────────────────────
