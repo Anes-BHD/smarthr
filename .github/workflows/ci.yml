@@ -167,7 +167,8 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    #    environment: staging
+    needs: vulnerability-scan
+    environment: staging
     outputs:
       backend_image: ${{ steps.meta.outputs.backend_image }}
       web_image:     ${{ steps.meta.outputs.web_image }}
@@ -284,7 +285,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-#    environment: staging
+    environment: staging
 
     steps:
       - name: Configure AWS credentials
