@@ -243,13 +243,15 @@ def _month_range(today: date) -> tuple[date, date]:
 
 
 def _ticket_line(ticket: Dict[str, Any], index: int) -> str:
+    code = get_ticket_code(ticket) or f"#{ticket.get('id')}"
     priority = _clean(ticket.get("priority")) or "priorité inconnue"
     employee = _employee_name(ticket) or "non assigné"
-    return f"{index}. {_title(ticket)} — {_status(ticket) or 'status inconnu'} — {priority} — {employee}"
+    return f"{index}. {code} — {_title(ticket)} — {_status(ticket) or 'status inconnu'} — {priority} — {employee}"
 
 
 def _employee_ticket_line(ticket: Dict[str, Any], index: int) -> str:
-    return f"{index}. {_title(ticket)} — {_status(ticket) or 'status inconnu'} — {_date_text(ticket)}"
+    code = get_ticket_code(ticket) or f"#{ticket.get('id')}"
+    return f"{index}. {code} — {_title(ticket)} — {_status(ticket) or 'status inconnu'} — {_date_text(ticket)}"
 
 
 def normalize_status(value: Any) -> str:
