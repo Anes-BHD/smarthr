@@ -560,6 +560,49 @@ def _requested_ticket_is_full_code(ticket_code: Any) -> bool:
     return normalized.startswith("TKT") and any(char.isdigit() for char in normalized)
 
 
+def find_all_tickets_by_code(ticket_code: Any, tickets: List[Dict[str, Any]] | None = None) -> List[Dict[str, Any]]:
+    requested = clean_text(ticket_code)
+    if not requested:
+        return []
+
+    ticket_list = tickets if tickets is not None else get_all_tickets()
+    matches: List[Dict[str, Any]] = []
+
+    if _requested_ticket_is_full_code(requested):
+        requested_code = normalize_ticket_code_for_match(requested)
+        for ticket in ticket_list:
+            ticket_codes = [normalize_ticket_code_for_match(value) for value in _ticket_code_values(ticket)]
+            if requested_code in ticket_codes:
+                matches.append(ticket)
+    else:
+        requested_number = _ticket_numeric_value(requested)
+        if requested_number is None:
+            return []
+        for ticket in ticket_list:
+            id_values = [ticket.get("id"), ticket.get("ticket_id")]
+            if any(_ticket_numeric_value(value) == requested_number for value in id_values):
+                matches.append(ticket)
+                continue
+            ticket_number = _ticket_numeric_value(ticket.get("ticket_number"))
+            if ticket_number == requested_number:
+                matches.append(ticket)
+                continue
+            code_suffixes = [_ticket_code_numeric_suffix(value) for value in _ticket_code_values(ticket)]
+            if requested_number in code_suffixes:
+                matches.append(ticket)
+
+    unique_matches: List[Dict[str, Any]] = []
+    seen_ids: set = set()
+    for ticket in matches:
+        identity = get_ticket_id(ticket) or id(ticket)
+        if identity in seen_ids:
+            continue
+        seen_ids.add(identity)
+        unique_matches.append(ticket)
+
+    return unique_matches
+
+
 def find_ticket_by_code(ticket_code: Any, tickets: List[Dict[str, Any]] | None = None) -> Dict[str, Any] | None:
     requested = clean_text(ticket_code)
     if not requested:

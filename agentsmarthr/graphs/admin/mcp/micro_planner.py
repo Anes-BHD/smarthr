@@ -284,7 +284,7 @@ def _normalize_ticket_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
         "handled": True,
         "tool_name": "ticket",
         "action_name": mapped_action,
-        "arguments": {key: value for key, value in mapped_arguments.items() if value not in (None, "", [])},
+        "arguments": {key: value for key, value in mapped_arguments.items() if value not in (None, "", [], "null")},
         "confidence": confidence,
         "reason": "compact ticket planner",
     }

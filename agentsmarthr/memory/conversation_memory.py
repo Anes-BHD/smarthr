@@ -72,7 +72,7 @@ def resolve_reference(session_id: str, text: str) -> Dict[str, Any]:
         "son statut",
         "son status",
     }
-    if memory.get("last_ticket") and any(ref in normalized for ref in ticket_refs):
+    if memory.get("last_ticket") and memory.get("last_tool") == "tickets" and any(ref in normalized for ref in ticket_refs):
         resolved["ticket_ref"] = memory["last_ticket"]
 
     return resolved

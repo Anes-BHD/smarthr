@@ -7,6 +7,7 @@ from graphs.admin.tools.ticket.tool import (
     build_full_ticket_update_payload,
     create_ticket_backend,
     employee_name_matches,
+    find_all_tickets_by_code,
     find_ticket_by_code,
     format_ticket_line,
     format_search_results,
@@ -875,8 +876,26 @@ def _execute_update_ticket_status(plan: Dict[str, Any]) -> str:
         ticket = find_ticket_by_code(ticket_code)
     except php_api_client.SmartHRApiError as error:
         return f"Impossible de modifier le statut : {_laravel_error_message(error)}"
-    except ValueError as error:
-        return str(error)
+    except ValueError:
+        candidates = find_all_tickets_by_code(ticket_code)
+        if not candidates:
+            return _ticket_not_found_message(ticket_code)
+        lines = [f"J'ai trouvé {len(candidates)} tickets avec le code {ticket_code} :"]
+        for index, candidate in enumerate(candidates, start=1):
+            lines.append(f"{index}. {get_ticket_subject(candidate)} — {_status(candidate)} — {normalize_priority(candidate.get('priority', ''))}")
+        lines.append("Entrez le numéro du ticket à modifier.")
+        set_pending_state(
+            session_id,
+            {
+                "tool_name": "ticket",
+                "pending_action": UPDATE_TICKET_STATUS,
+                "awaiting_disambiguation": True,
+                "disambiguation_type": "ticket",
+                "candidates": candidates,
+                "pending_status": status,
+            },
+        )
+        return "\n".join(lines)
     if not ticket:
         return _ticket_not_found_message(ticket_code)
 

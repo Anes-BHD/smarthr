@@ -841,11 +841,12 @@ Format :
 Omettre les champs inutiles.
 
 Actions :
-show_ticket, search_tickets, tickets_by_priority, tickets_by_status,
+list_tickets, show_ticket, search_tickets, tickets_by_priority, tickets_by_status,
 count_tickets, create_ticket, update_ticket_status, assign_ticket,
 unsupported_action.
 
 Règles :
+- lister tous les tickets sans filtre = list_tickets
 - voir, montrer, afficher ou détails d’un ticket précis = show_ticket
 - changer, modifier ou mettre son statut = update_ticket_status
 - affecter ou assigner = assign_ticket
@@ -855,6 +856,12 @@ Règles :
 - ne rien inventer
 
 Exemples :
+message "lister les tickets"
+{"action":"list_tickets"}
+
+message "liste les tickets"
+{"action":"list_tickets"}
+
 mémoire ticket=TKT-0024, message "change son statut à COMPLETED"
 {"action":"update_ticket_status","ticket_ref":"TKT-0024","status":"completed"}
 

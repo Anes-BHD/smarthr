@@ -14,11 +14,12 @@ from graphs.admin.mcp.micro_planner import OPENROUTER_ERROR_MESSAGE, plan_employ
 from graphs.admin.tools.absence.executor import ABSENCE_ACTIONS, execute_absence_tool
 from graphs.admin.tools.employees.executor import execute_employee_tool
 from graphs.admin.tools.ticket.executor import TICKET_ACTIONS, execute_ticket_tool
+from graphs.admin.tools.ticket.tool import get_ticket_code as get_ticket_display_code
 from llm.conversation_gate import classify_message
 from llm.response_humanizer import humanize_response
 from memory.conversation_memory import clear_memory as clear_conversation_memory
 from memory.conversation_memory import get_memory, resolve_reference, update_memory
-from memory.pending_state import clear_pending_state, get_pending_state
+from memory.pending_state import clear_pending_state, get_pending_state, set_pending_state
 from security.admin_guard import verify_admin_guard
 from tools.projects.handler import PROJECT_ACTIONS, execute_project_tool
 
@@ -235,15 +236,17 @@ def _response_successful(message: str) -> bool:
         "quel ",
         "quelle ",
         "je n’ai pas trouvé",
-        "je n'ai pas trouvé",
+        "je n’ai pas trouvé",
         "introuvable",
         "impossible",
         "répondez",
         "repondez",
         "n’est pas encore",
-        "n'est pas encore",
+        "n’est pas encore",
         "annul",
         "erreur",
+        "aucun ticket",
+        "aucun employé",
     ]
     return bool(text) and not any(marker in text for marker in failure_markers)
 
@@ -410,28 +413,52 @@ async def chat(req: ChatRequest, request: Request, _: None = Depends(verify_admi
 
     if pending and pending.get("awaiting_disambiguation"):
         candidates = pending.get("candidates") or []
-        selected_employee = _resolve_disambiguation_choice(req.message, candidates)
         pending_action = pending.get("pending_action")
+        disambiguation_type = pending.get("disambiguation_type") or "employee"
 
-        if selected_employee:
-            plan = {
-                "handled": True,
-                "tool_name": "employees",
-                "action_name": pending_action,
-                "arguments": {},
-                "_session_id": req.session_id,
-                "_raw_message": req.message,
-                "_selected_employee": selected_employee,
-            }
-            final_message = execute_employee_tool(plan)
+        if disambiguation_type == "ticket":
+            ordinal_map = {"1": 0, "2": 1, "3": 2, "4": 3, "5": 4}
+            selected_index = ordinal_map.get(normalized_message.strip())
+            selected_ticket = candidates[selected_index] if selected_index is not None and selected_index < len(candidates) else None
+            if selected_ticket:
+                display_code = get_ticket_display_code(selected_ticket)
+                pending_status = pending.get("pending_status", "")
+                clear_pending_state(req.session_id)
+                set_pending_state(
+                    req.session_id,
+                    {
+                        "tool_name": "ticket",
+                        "pending_action": pending_action,
+                        "pending_slots": {"ticket_code": display_code, "status": pending_status},
+                        "awaiting_confirmation": True,
+                    },
+                )
+                plan = {"handled": True, "tool_name": "ticket", "action_name": pending_action, "arguments": {}}
+                final_message = f"Voulez-vous confirmer le changement du statut du ticket {display_code} vers {pending_status} ? oui/non"
+            else:
+                plan = {"handled": True, "tool_name": "ticket", "action_name": pending_action, "arguments": {}}
+                final_message = "Je n’ai pas reconnu ce choix. Entrez le numéro du ticket (1, 2, 3...)."
         else:
-            plan = {
-                "handled": True,
-                "tool_name": "employees",
-                "action_name": pending_action,
-                "arguments": {},
-            }
-            final_message = "Je n’ai pas reconnu ce choix. Donnez le numéro ou le nom complet."
+            selected_employee = _resolve_disambiguation_choice(req.message, candidates)
+            if selected_employee:
+                plan = {
+                    "handled": True,
+                    "tool_name": "employees",
+                    "action_name": pending_action,
+                    "arguments": {},
+                    "_session_id": req.session_id,
+                    "_raw_message": req.message,
+                    "_selected_employee": selected_employee,
+                }
+                final_message = execute_employee_tool(plan)
+            else:
+                plan = {
+                    "handled": True,
+                    "tool_name": "employees",
+                    "action_name": pending_action,
+                    "arguments": {},
+                }
+                final_message = "Je n’ai pas reconnu ce choix. Donnez le numéro ou le nom complet."
     elif pending and pending.get("awaiting_confirmation"):
         pending_action = pending.get("pending_action")
         pending_tool = pending.get("tool_name") or "employees"
