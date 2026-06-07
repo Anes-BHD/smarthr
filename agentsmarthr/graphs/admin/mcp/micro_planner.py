@@ -293,12 +293,16 @@ def _normalize_ticket_plan(plan: Dict[str, Any]) -> Dict[str, Any]:
 def _memory_context(memory: Dict[str, Any] | None, tool: str) -> str:
     memory = memory or {}
     if tool == "ticket":
-        return f"ticket={memory.get('last_ticket') or 'null'}"
+        last = memory.get("last_ticket")
+        return f"ticket={last}" if last else ""
     if tool == "projects":
-        return f"project={memory.get('last_project') or 'null'}"
+        last = memory.get("last_project")
+        return f"project={last}" if last else ""
     if tool == "employees":
-        return f"employee={memory.get('last_employee') or 'null'}"
-    return f"tool={memory.get('last_tool') or 'null'}"
+        last = memory.get("last_employee")
+        return f"employee={last}" if last else ""
+    last_tool = memory.get("last_tool")
+    return f"tool={last_tool}" if last_tool else ""
 
 
 def _extract_json_object(raw_content: str) -> Dict[str, Any] | None:

@@ -185,7 +185,7 @@ def _apply_memory_references(session_id: str, message: str, plan: dict) -> dict:
     tool_name = plan.get("tool_name")
     arguments = _plan_arguments(plan)
 
-    if tool_name == "employees" and resolved.get("employee_name") and not arguments.get("employee_name"):
+    if tool_name == "employees" and resolved.get("employee_name") and arguments.get("employee_name") in (None, "", "null"):
         _set_plan_value(plan, "employee_name", resolved["employee_name"])
     if tool_name == "projects" and resolved.get("project_name") and not (arguments.get("project_name") or plan.get("project_name")):
         _set_plan_value(plan, "project_name", resolved["project_name"])

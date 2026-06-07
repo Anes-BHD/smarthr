@@ -47,6 +47,7 @@ UPDATE_FIELDS = {
     "phone",
     "department_name",
     "designation_name",
+    "status",
 }
 ACTION_DISABLED_MESSAGE = "Cette action n’est pas encore activée dans cette phase."
 UNSUPPORTED_FIELD_MESSAGE = "Je peux lire seulement : téléphone, email, adresse, designation, département, nom complet et statut."
@@ -574,7 +575,7 @@ def _update_missing_message(employee_name: str, fields: Dict[str, str]) -> str:
     if not employee_name:
         return "Quel employé voulez-vous modifier ?"
     if not fields:
-        return "Quelle information voulez-vous modifier ? firstname, lastname, email, phone, department ou designation ?"
+        return "Quelle information voulez-vous modifier ? firstname, lastname, email, phone, department, designation ou status ?"
 
     missing_values = [field for field, value in fields.items() if not value]
     if len(missing_values) == 1:
@@ -601,6 +602,9 @@ def _build_update_payload(employee: Dict[str, Any], fields: Dict[str, str]) -> D
     for key in ("firstname", "lastname", "email", "phone"):
         if fields.get(key):
             payload[key] = fields[key]
+
+    if fields.get("status"):
+        payload["status"] = fields["status"]
 
     if fields.get("department_name"):
         department_result = _resolve_department(fields["department_name"])
