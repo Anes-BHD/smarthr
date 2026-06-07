@@ -140,6 +140,27 @@ jobs:
         with:
           sarif_file: dependency-check-report/dependency-check-report.sarif
 
+      - name: Send OWASP report email
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          to: benhenda.anes@gmail.com
+          from: SmartRH CI <${{ secrets.MAIL_USERNAME }}>
+          subject: "[SmartRH] OWASP Dependency-Check — ${{ job.status }} (#${{ github.run_number }})"
+          body: |
+            OWASP Dependency-Check finished with status: ${{ job.status }}
+
+            Repository : ${{ github.repository }}
+            Branch     : ${{ github.ref_name }}
+            Commit     : ${{ github.sha }}
+            Run        : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            The full HTML/XML/SARIF report is attached as an artifact to the run above.
+
   # ─────────────────────────────────────────────
   # 3. Trivy Vulnerability Scan
   # ─────────────────────────────────────────────
@@ -167,6 +188,27 @@ jobs:
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: 'trivy-results.sarif'
+
+      - name: Send Trivy report email
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          to: benhenda.anes@gmail.com
+          from: SmartRH CI <${{ secrets.MAIL_USERNAME }}>
+          subject: "[SmartRH] Trivy Vulnerability Scan — ${{ job.status }} (#${{ github.run_number }})"
+          body: |
+            Trivy vulnerability scan finished with status: ${{ job.status }}
+
+            Repository : ${{ github.repository }}
+            Branch     : ${{ github.ref_name }}
+            Commit     : ${{ github.sha }}
+            Run        : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            The SARIF results are available in the GitHub Security tab and as an artifact on the run above.
 
   # ─────────────────────────────────────────────
   # 1. Build & Push Docker Images to ECR
