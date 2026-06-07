@@ -101,24 +101,31 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Cache OWASP NVD data
+        uses: actions/cache@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          path: ~/.dependency-check/data
+          key: dependency-check-data-${{ runner.os }}
+          restore-keys: dependency-check-data-
 
       - name: Run OWASP Dependency-Check
-        uses: dependency-check/Dependency-Check_Action@main
         id: owasp
         continue-on-error: true
-        with:
-          project: 'smarthr'
-          path: '.'
-          format: 'ALL'
-          out: 'dependency-check-report'
-          args: >
-            --enableRetired
+        run: |
+          DC_VERSION=$(curl -fsSL https://jeremylong.github.io/DependencyCheck/current.txt)
+          curl -fsSL "https://github.com/jeremylong/DependencyCheck/releases/download/v${DC_VERSION}/dependency-check-${DC_VERSION}-release.zip" \
+            -o dependency-check.zip
+          unzip -q dependency-check.zip
+          mkdir -p dependency-check-report
+          ./dependency-check/bin/dependency-check.sh \
+            --project smarthr \
+            --scan . \
+            --format ALL \
+            --out dependency-check-report \
+            --data ~/.dependency-check/data \
+            --enableRetired \
             --enableExperimental
+
       - name: Upload Dependency-Check report
         if: always()
         uses: actions/upload-artifact@v4
